@@ -1,6 +1,6 @@
 import './style.css';
 
-const API_BASE = 'http://localhost:3002/api';
+const API_BASE = `http://${window.location.hostname}:3002/api`;
 
 // Deteksi cabang dari nomor port — tidak butuh env variable, tidak bisa salah
 const PORT_MAP: Record<string, string> = {
