@@ -644,6 +644,19 @@
         -1152,
         -152
       ]
+    },
+    {
+      "parameters": {
+        "jsCode": "let text = $input.item.json.text || $input.item.json.content || '{}';\n// Robust JSON Extraction (Handle CoT/Thought blocks)\nconst jsonMatch = text.match(/\\{[\\s\\S]*\\}/);\nif (jsonMatch) {\n  text = jsonMatch[0];\n}\ntext = text.replace(/```json/gi, '').replace(/```/gi, '').trim();\nlet bongkar = {};\ntry {\n  bongkar = JSON.parse(text);\n} catch(e) {}\nreturn [{ json: { intent: bongkar.intent || 'lainnya', deskripsi: bongkar.deskripsi || '' } }];"
+      },
+      "id": "clean-intent",
+      "name": "Clean Intent",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1850,
+        -464
+      ]
     }
   ],
   "pinData": {},
@@ -769,6 +782,17 @@
       ]
     },
     "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Clean Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean Intent": {
       "main": [
         [
           {

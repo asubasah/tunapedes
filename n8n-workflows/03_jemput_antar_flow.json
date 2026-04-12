@@ -40,7 +40,7 @@
     },
     {
       "parameters": {
-        "jsCode": "let text = $input.item.json.text || $input.item.json.content || '{}';\ntext = text.replace(/```json/gi, '').replace(/```/gi, '').trim();\nlet bongkar = {};\ntry { bongkar = JSON.parse(text); } catch(e) {}\n\n// cabang_id SELALU dari device_id webhook, bukan dari AI\nconst cabang_from_device = $('Webhook (From Main Router)').item.json.body.cabang_id\n  || ($('Webhook (From Main Router)').item.json.body.device_id || '').replace('fitmotor_', '');\n\nreturn [{ json: {\n  layanan: bongkar.layanan || '',\n  motor: bongkar.motor || '',\n  nopol: bongkar.nopol || '',\n  waktu: bongkar.waktu || '',\n  cabang_id: cabang_from_device,\n  alamat_jemput: bongkar.alamat_jemput || ''\n} }];"
+        "jsCode": "let text = $input.item.json.text || $input.item.json.content || '{}';\n// Robust JSON Extraction (Handle CoT/Thought blocks)\nconst jsonMatch = text.match(/\\{[\\s\\S]*\\}/);\nif (jsonMatch) {\n  text = jsonMatch[0];\n}\ntext = text.replace(/```json/gi, '').replace(/```/gi, '').trim();\nlet bongkar = {};\ntry {\n  bongkar = JSON.parse(text);\n} catch(e) {}\n\n// cabang_id SELALU dari device_id webhook, bukan dari AI\nconst cabang_from_device = $('Webhook (From Main Router)').item.json.body.cabang_id\n  || ($('Webhook (From Main Router)').item.json.body.device_id || '').replace('fitmotor_', '');\n\nreturn [{ json: {\n  layanan: bongkar.layanan || '',\n  motor: bongkar.motor || '',\n  nopol: bongkar.nopol || '',\n  waktu: bongkar.waktu || '',\n  cabang_id: cabang_from_device,\n  alamat_jemput: bongkar.alamat_jemput || ''\n} }];"
       },
       "id": "code-parse",
       "name": "Gemini: Ekstrak Data Jemput",

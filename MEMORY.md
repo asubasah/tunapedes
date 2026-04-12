@@ -13,7 +13,7 @@ Integrasi: **n8n v1.x (Docker)** + **OpenRouter Cloud AI** + **MySQL** + **GoWA 
 - **WhatsApp Gateway:** Port `3010` (GoWA Docker).
 - **Automation Engine:** Port `5678` (n8n Docker).
 - **Database:** MySQL `fitmotor_crm` (User: `dongkrak_user`, Pass: `Uangmengalirderaskerekeningku8*()`).
-- **AI Brain:** Diarahkan ke **OpenRouter** (Model: `google/gemini-2.0-flash-exp:free`) untuk hemat sumber daya VPS. API Key tersimpan di `config/env.json`.
+- **AI Brain:** Diarahkan ke **OpenRouter** (Model: `google/gemma-4-31b-it:free`) untuk hemat sumber daya VPS. API Key tersimpan di `config/env.json`.
 
 ## Core Lessons & Design Decisions (Deployment Phase)
 1. **VPS Multi-Tenant Isolation:** Gunakan Port-Based detection di frontend (`window.location.port`) untuk memisahkan cabang secara mutlak tanpa takut env variable tercampur.
