@@ -373,21 +373,21 @@
     },
     {
       "parameters": {
-        "model": "qwen2.5:3b",
+        "model": "google/gemini-2.0-flash-exp:free",
         "options": {}
       },
-      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1,
       "position": [
         -50,
         500
       ],
       "id": "ollama-model",
-      "name": "Ollama Model",
+      "name": "OpenRouter Model",
       "credentials": {
-        "ollamaApi": {
-          "id": "6aNAhb62GAu8R8rG",
-          "name": "Ollama account"
+        "openAiApi": {
+          "id": "openrouter-api-key",
+          "name": "OpenRouter API"
         }
       }
     },
@@ -580,7 +580,7 @@
         ]
       ]
     },
-    "Ollama Model": {
+    "OpenRouter Model": {
       "ai_languageModel": [
         [
           {

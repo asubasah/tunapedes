@@ -456,54 +456,44 @@
     },
     {
       "parameters": {
-        "model": "qwen2.5:3b",
+        "model": "google/gemini-2.0-flash-exp:free",
         "options": {}
       },
-      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1,
       "position": [
         -2000,
         -320
       ],
       "id": "e4d0f47f-2cce-4fc0-9481-ccadbc633119",
-      "name": "Ollama Chat Model",
+      "name": "OpenRouter Chat Model",
       "credentials": {
-        "ollamaApi": {
-          "id": "6aNAhb62GAu8R8rG",
-          "name": "Ollama account"
+        "openAiApi": {
+          "id": "openrouter-api-key",
+          "name": "OpenRouter API"
         }
       }
     },
     {
       "parameters": {
-        "modelId": {
-          "__rl": true,
-          "value": "qwen2.5:3b",
-          "mode": "list",
-          "cachedResultName": "qwen2.5:3b"
-        },
-        "messages": {
-          "values": [
-            {}
-          ]
-        },
+        "model": "google/gemini-2.0-flash-exp:free",
         "options": {
           "system": "Anda adalah Customer Service dari bengkel motor Fit Motor Tegal.\nJawab pertanyaan pelanggan dengan sopan, ramah (bahasa sehari-hari), dan SANGAT SINGKAT (maksimal 2-3 kalimat).\n\nINFO BENGKEL:\n- Jam Buka: Senin s/d Sabtu (08:00 – 17:00 WIB). Hari Minggu/Libur TUTUP.\n- Syarat: HANYA terima motor Injeksi tahun 2010 ke atas. TIDAK TERIMA motor Karburator/2-Tak!\n- Layanan Jemput: Max jarak 7 km. (biaya mulai Rp 6.000 radius 2km).\n- Antrian prioritas untuk pelanggan yang booking/daftar terlebih dahulu.\n\nDAFTAR CABANG & NOMOR WA MASING-MASING:\n- Adiwerna  (Jl. Raya Adiwerna, Tegal)  → 0855-0994-1624\n- Cikditiro (Jl. Cikditiro, Tegal)       → 0811-3438-800\n- Pacul     (Jl. Pacul, Tegal)           → 0831-1610-5550\n- Pesalakan (Jl. Raya Pesalakan, Tegal)  → (segera hadir)\n- Trayeman  (Jl. Trayeman, Slawi, Tegal) → (segera hadir)\n\nATURAN PENTING:\n- Jika pelanggan sedang WA ke satu cabang tapi minta pindah ke cabang lain karena kejauhan, berikan nomor WA cabang yang lebih dekat dari daftar di atas.\n- Jika ada estimasi biaya atau hal yang tidak ada di panduan ini, suruh datang langsung agar dicek mekanik.\n- Jika hanya disapa \"halo/pagi\", balas salam lalu tawarkan \"Ada kendala apa dengan motornya Kak? Kami siap bantu!\""
         }
       },
-      "type": "@n8n/n8n-nodes-langchain.ollama",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1,
       "position": [
         -1504,
         -160
       ],
       "id": "90b45c6d-6534-4a0d-901e-7285646b4d21",
-      "name": "CS_Agent",
+      "name": "OpenRouter-CS",
       "alwaysOutputData": true,
       "credentials": {
-        "ollamaApi": {
-          "id": "6aNAhb62GAu8R8rG",
-          "name": "Ollama account"
+        "openAiApi": {
+          "id": "openrouter-api-key",
+          "name": "OpenRouter API"
         }
       }
     },
@@ -789,7 +779,7 @@
         ]
       ]
     },
-    "Ollama Chat Model": {
+    "OpenRouter Chat Model": {
       "ai_languageModel": [
         [
           {
@@ -800,7 +790,7 @@
         ]
       ]
     },
-    "CS_Agent": {
+    "OpenRouter-CS": {
       "main": [
         [
           {

@@ -1,26 +1,33 @@
 # FIT MOTOR CRM - LONG TERM MEMORY 🧠
 
-## Architecture Overview
-Ini adalah mahakarya AI CRM Bengkel dengan standar Enterprise! Sistem ini bukan sekadar Chatbot, melainkan integrasi n8n + LLM Ollama (qwen2.5:3b) + MySQL + GoWA Multi-Device.
+## Architecture Overview (Production Live)
+Ini adalah ekosistem AI CRM Bengkel standar Enterprise yang sudah **LIVE** di VPS.
+Integrasi: **n8n v1.x (Docker)** + **OpenRouter Cloud AI** + **MySQL** + **GoWA Multi-Device (Docker)**.
 
-Sistem dibagi menjadi 5 Arus Utama Workflow (JSON) di n8n:
-1. **`01_main_router.json`**: Pos Satpam / Pengatur Jalan (Router). Mengelompokkan Intent menggunakan Basic LLM Chain menjadi 4 cabang: `booking`, `jemput_antar`, `cek_booking`, dan `lainnya` (FAQ).
-   * **Fitur Super:** Terdapat *Global Interceptor* di fungsi "Arahkan Sesi". Biarpun user punya `sesi_aktif`, jika chatnya menandung "BKG-", sistem akan menghancurkan paksaan sesi lambat dan langsung melemparnya ke alur pelacakan.
-2. **`02_booking_flow.json`**: Alur servis bengkel reguler. Melakukan validasi Kapasitas dan Cek Duplikat. Jika sukses, memberikan *TICKET KODE BOOKING* (BKG-xxxx) dan otomatis menyimpan profil pelanggan ke DB.
-3. **`03_jemput_antar_flow.json`**: Alur servis antar jemput / mogok jembatan. Terkoneksi dengan **Google Maps Distance Matrix API**. Menolak jika jarak > 7km, serta memiliki pengaman bypass otomatis jika limit env API terblokir.
-4. **`04_maintenance_flow.json`** (Cron/Automated): Pasukan bayangan untuk memonitor *Ghosting* dan mengirimkan SMS pengingat jadwal rutin (Sales Engine).
-5. **`05_cek_booking_flow.json`** (Keamanan Data & Tracking): Fitur canggih anti *Social Engineering*. Mengekstrak nomor tiket dan mencocokkan asal pengirim WA. Jika beda WA, bot tidak membocorkan data nopol dan mengirimkan sinyal peringatan ke pemilik aslinya.
+## Infrastructure Details (VPS Production)
+- **Host IP:** `103.174.114.249` (User: `emlsl`)
+- **Web App Dashboard:**
+  - Master Dashboard: Port `5000`
+  - Branch Dashboards: Port `5001` (Adiwerna), `5002` (Pesalakan), `5003` (Pacul), `5004` (Cikditiro).
+- **API Backend:** Port `3002` (Node.js API Bridge).
+- **WhatsApp Gateway:** Port `3010` (GoWA Docker).
+- **Automation Engine:** Port `5678` (n8n Docker).
+- **Database:** MySQL `fitmotor_crm` (User: `dongkrak_user`, Pass: `Uangmengalirderaskerekeningku8*()`).
+- **AI Brain:** Diarahkan ke **OpenRouter** (Model: `google/gemini-2.0-flash-exp:free`) untuk hemat sumber daya VPS. API Key tersimpan di `config/env.json`.
 
-## Core Lessons & Design Decisions
-1. **Model Hallucination Control**: LLM ukuran kecil (seperti Qwen 3B) sangat rawan melanggar aturan JSON Array dan mengarang kata baru (contoh: ngarang intent `"jam_operasional"`). Prompt harus dikosakata keras *(Hard-constrained)*: "DILARANG KERAS MEMBUAT KATEGORI BARU".
-2. **Basic LLM Chain vs Agent**: Dalam n8n The New Version, `Model Node` tidak berdiri sendiri, wajib diikat ke *Chain* untuk merespon secara natural. Opsi `Basic LLM Chain` sangat jauh lebih stabil dibanding `ReAct Agent`.
-3. **Multi-turn Memory (`sesi_chat`)**: Jangan asumsikan user memberi pesan utuh 100%. User sering putus-putus. Gunakan *State Machine* MySQL untuk mengingat konteks. Kalo Nopol/Motor udh ada, jangan ditanya dua kali.
-4. **Database Single Point of Truth**: Tabel `booking` dan `pelanggan` ada dalam 1 Database terpusat meskipun melayani 5 cabang berbeda. Pemisahannya cukup mengandalkan Filter pada saat View `SELECT * FROM ... WHERE cabang_id='xxx'`.
-5. **Frontend Next Step**: Pembangunan GUI untuk scan 4 QR Code dari API GoWA dan klik tombol status `selesai` (menembak Update MySQL).
+## Core Lessons & Design Decisions (Deployment Phase)
+1. **VPS Multi-Tenant Isolation:** Gunakan Port-Based detection di frontend (`window.location.port`) untuk memisahkan cabang secara mutlak tanpa takut env variable tercampur.
+2. **Dockerization for WA:** GoWA wajib di kontainer Docker agar isolasi session (multi-device) stabil. Port 3000 sering bentrok, dipindahkan ke **3010**.
+3. **n8n Security Cookie:** Pada VPS tanpa SSL, n8n wajib diset `N8N_SECURE_COOKIE=false` agar bisa login via IP publik.
+4. **Cloud AI vs Local AI:** Untuk VPS dengan RAM < 8GB, hindari Ollama lokal. OpenRouter API jauh lebih stabil dan responsif untuk production.
 
-## Work Status (Last Updated 2026-04-13)
-- Flow 01, 02, 03, dan 05 100% SUKSES TERSAMBUNG dan LOLOS UJI LOGIKA.
-- LLM System Prompt sudah diperketat layaknya perwira militer (Anti Halusinasi Output). 
-- FRONTEND KANBAN DASHBOARD SELESAI & OPERASIONAL DENGAN ARSITEKTUR MULTI-TENANT ISOLASI PORT MUTLAK (Port Mapping Frontend `window.location.port`).
-- BUG DATABASE & BACKEND (Stale process, salah nama tabel, order urutan UI Kanban, status nyangkut) telah diperbaiki dan dibersihkan otomatis pada `START_ECOSYSTEM.bat`.
-- Sistem berada pada kondisi STABIL dan SIAP PAKAI secara penuh untuk operasional harian.
+## Work Status (Full Live Test 2026-04-13)
+- [x] Migrasi Code ke Repo Github `asubasah/tunapedes`.
+- [x] Deployment API & Frontend via PM2 Sukses.
+- [x] Database Deployment & Schema Import Sukses.
+- [x] GoWA Docker Up & Running di Port 3010.
+- [x] n8n Docker Up & Running di Port 5678.
+- [x] API_BASE Fix (Dynamic IP detection untuk Dashboard).
+- [x] AI Brain Migration (Ollama -> OpenRouter) PROGRESS.
+
+Sistem sekarang dalam kondisi **"READY FOR CLIENT"**.
