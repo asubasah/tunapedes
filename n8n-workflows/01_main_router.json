@@ -647,7 +647,7 @@
     },
     {
       "parameters": {
-        "jsCode": "let text = $input.item.json.text || $input.item.json.content || '{}';\n// Robust JSON Extraction (Handle CoT/Thought blocks)\nconst jsonMatch = text.match(/\\{[\\s\\S]*\\}/);\nif (jsonMatch) {\n  text = jsonMatch[0];\n}\ntext = text.replace(/```json/gi, '').replace(/```/gi, '').trim();\nlet bongkar = {};\ntry {\n  bongkar = JSON.parse(text);\n} catch(e) {}\nreturn [{ json: { intent: bongkar.intent || 'lainnya', deskripsi: bongkar.deskripsi || '' } }];"
+        "jsCode": "let text = $input.item.json.text || $input.item.json.content || '{}';\n// Robust JSON Extraction (Handle CoT/Thought blocks)\ntext = text.replace(/<thought>[\\s\\S]*?<\\/thought>/gi, '');\nconst jsonMatch = text.match(/\\{[\\s\\S]*\\}/);\nif (jsonMatch) {\n  text = jsonMatch[0];\n}\ntext = text.replace(/```json/gi, '').replace(/```/gi, '').trim();\nlet bongkar = {};\ntry {\n  bongkar = JSON.parse(text);\n} catch(e) {}\nreturn [{ json: { intent: bongkar.intent || 'lainnya', deskripsi: bongkar.deskripsi || '' } }];"
       },
       "id": "clean-intent",
       "name": "Clean Intent",
