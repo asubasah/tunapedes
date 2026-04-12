@@ -1,0 +1,889 @@
+{
+  "name": "FitMotor — 01 Main Router Baru",
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "check-event-type",
+              "leftValue": "={{ $json.body.event }}",
+              "rightValue": "message",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "check-has-text",
+              "leftValue": "={{ $json.body.payload.body }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "check-not-from-me",
+              "leftValue": "={{ $json.body.payload.fromMe === true }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ca19a97b-54f1-47ec-865e-583772be0059",
+      "name": "Filter: Pesan Masuk Valid",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -3648,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "nomor_wa",
+              "name": "nomor_wa",
+              "value": "={{ $json.body.payload.from.replace('@s.whatsapp.net','').replace('@c.us','') }}",
+              "type": "string"
+            },
+            {
+              "id": "device_id",
+              "name": "device_id",
+              "value": "={{ $json.body.device_id }}",
+              "type": "string"
+            },
+            {
+              "id": "pesan",
+              "name": "pesan",
+              "value": "={{ $json.body.payload.type === 'location' ? '[LOKASI DIKIRIM (Google Maps Coordinate): ' + ($json.body.payload.lat || ($json.body.payload.location && $json.body.payload.location.degreesLatitude)) + ',' + ($json.body.payload.lng || ($json.body.payload.location && $json.body.payload.location.degreesLongitude)) + ']' : ($json.body.payload.body || '') }}",
+              "type": "string"
+            },
+            {
+              "id": "message_id",
+              "name": "message_id",
+              "value": "={{ $json.body.payload.id }}",
+              "type": "string"
+            },
+            {
+              "id": "timestamp",
+              "name": "timestamp",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "cabang_id",
+              "name": "cabang_id",
+              "value": "={{ $json.body.device_id ? $json.body.device_id.replace('fitmotor_', '') : '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "66a4aff6-d23e-407d-b0cf-048bea40941d",
+      "name": "Extract: nomor_wa & pesan",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -3424,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT nomor_wa, nama FROM non_ai_list WHERE nomor_wa = '{{ $json.nomor_wa }}' LIMIT 1",
+        "options": {}
+      },
+      "id": "a950fea0-3261-4f37-af13-7fc6eb0da462",
+      "name": "MySQL: Cek Non-AI List",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        -3200,
+        -96
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "mySql": {
+          "id": "On2uunDgsIP8TtL0",
+          "name": "FitMotor MySQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "is-non-ai",
+              "leftValue": "={{ $json.body.nomor_wa }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b092fe09-bf88-41bd-8391-ed8d3be0cfbd",
+      "name": "Apakah Non-AI?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2976,
+        -96
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, nama, motor, nopol, pernah_jemput, alamat_jemput_terakhir, is_non_ai, ai_paused_until, fallback_count FROM pelanggan WHERE nomor_wa = '{{ $('Extract: nomor_wa & pesan').item.json.nomor_wa }}' LIMIT 1",
+        "options": {}
+      },
+      "id": "91cfbfcf-2868-4006-a9e3-385c6cf7f7f9",
+      "name": "MySQL: Lookup Pelanggan",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        -2752,
+        -288
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "mySql": {
+          "id": "On2uunDgsIP8TtL0",
+          "name": "FitMotor MySQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "is-registered",
+              "name": "is_registered",
+              "value": "={{ $json.id !== undefined && $json.id !== null && $json.id !== '' }}",
+              "type": "boolean"
+            },
+            {
+              "id": "ai-paused",
+              "name": "ai_paused",
+              "value": "={{ $json.ai_paused_until !== null && new Date($json.ai_paused_until) > new Date() }}",
+              "type": "boolean"
+            },
+            {
+              "id": "nama-pelanggan",
+              "name": "nama_pelanggan",
+              "value": "={{ $json.nama || 'Pelanggan' }}",
+              "type": "string"
+            },
+            {
+              "id": "nopol",
+              "name": "nopol",
+              "value": "={{ $json.nopol || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "motor",
+              "name": "motor",
+              "value": "={{ $json.motor || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "da1d1afd-afb4-4aba-9daf-24dfefd1cc12",
+      "name": "Set: Pelanggan Context",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2528,
+        -288
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ai-paused-check",
+              "leftValue": "={{ $json.ai_paused }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a517ca59-0a7d-4061-b550-d56481e09c01",
+      "name": "AI Sedang Dijeda?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2304,
+        -288
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.text }}",
+                    "rightValue": "booking",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    },
+                    "id": "4e2a1f50-b8db-4239-ba5d-c9fe228e8cb6"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "booking"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.text }}",
+                    "rightValue": "jemput_antar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    },
+                    "id": "d25ba611-80e0-416d-abca-4e4faacbcab5"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "jemput_antar"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "5d3b2aa6-a399-4086-91f6-180411ca517d",
+                    "leftValue": "={{ $json.text }}",
+                    "rightValue": "lainnya",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "lainnya"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "cek",
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "cek_booking",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "cek_booking"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ec94796b-270f-495f-9c65-5f29d986af9d",
+      "name": "Switch Intent",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        -1728,
+        -464
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/booking_flow",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"nomor_wa\": $('Extract: nomor_wa & pesan').item.json.nomor_wa, \"pesan\": $('Extract: nomor_wa & pesan').item.json.pesan, \"nama_pelanggan\": $('Set: Pelanggan Context').item.json.nama_pelanggan, \"motor\": $('Set: Pelanggan Context').item.json.motor, \"nopol\": $('Set: Pelanggan Context').item.json.nopol, \"device_id\": $('Extract: nomor_wa & pesan').item.json.device_id, \"cabang_id\": $('Extract: nomor_wa & pesan').item.json.cabang_id } }}",
+        "options": {}
+      },
+      "id": "0637dc52-d1ef-4f6a-970e-10398e167782",
+      "name": "Route: Booking Flow",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -1152,
+        -544
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/jemput_antar_flow",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"nomor_wa\": $('Extract: nomor_wa & pesan').item.json.nomor_wa, \"pesan\": $('Extract: nomor_wa & pesan').item.json.pesan, \"nama_pelanggan\": $('Set: Pelanggan Context').item.json.nama_pelanggan, \"motor\": $('Set: Pelanggan Context').item.json.motor, \"nopol\": $('Set: Pelanggan Context').item.json.nopol, \"device_id\": $('Extract: nomor_wa & pesan').item.json.device_id, \"cabang_id\": $('Extract: nomor_wa & pesan').item.json.cabang_id } }}",
+        "options": {}
+      },
+      "id": "3e62f2c1-6f70-410e-a129-f431c0f861c1",
+      "name": "Route: Jemput Antar Flow",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -1152,
+        -352
+      ]
+    },
+    {
+      "parameters": {
+        "deviceIdOverride": "={{ $('Extract: nomor_wa & pesan').item.json.device_id }}",
+        "phoneNumber": "={{ $('Extract: nomor_wa & pesan').item.json.nomor_wa }}",
+        "message": "={{ $json.content }}"
+      },
+      "id": "2acf604e-079c-4b2b-982d-a3abb5106d70",
+      "name": "GoWA: FAQ/Lainnya",
+      "type": "@aldinokemal2104/n8n-nodes-gowa.gowa",
+      "typeVersion": 1,
+      "position": [
+        -1152,
+        -160
+      ],
+      "credentials": {
+        "goWhatsappApi": {
+          "id": "iwMVuTKnzKkCBH6T",
+          "name": "FitMotor GoWA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Extract: nomor_wa & pesan').item.json.pesan }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=Anda adalah mesin Router n8n. Klasifikasikan pesan user ke dalam SALAH SATU dari 4 kategori baku ini. \nDILARANG KERAS membuat kategori baru (seperti \"jam_operasional\", \"lokasi\", dll). Anda HANYA BOLEH membalas dengan format JSON murni ini:\n\n{\"intent\": \"PILIHAN_ANDA\"}\n\nPilihan yang tersedia HANYA:\n1. \"booking\" -> Jika user ingin memesan servis reguler bengkel.\n2. \"jemput_antar\" -> Jika user minta montir datang, mogok, atau jemput kendaraan.\n3. \"cek_booking\" -> Jika user bertanya tentang status, resi, nomor antrian, atau menyebutkan format \"BKG-xxxx\".\n4. \"lainnya\" -> Jika user bertanya pertanyaan umum (jam operasional, letak lokasi bengkel, harga, dll) ATAU jika tidak cocok dengan 3 kategori di atas. WAJIB gunakan kata \"lainnya\", JANGAN DIUBAH!\n\nPesan User: {{ $('Extract: nomor_wa & pesan').item.json.pesan }}"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -2096,
+        -800
+      ],
+      "id": "f387028e-c2c9-4a24-963e-2134540df32f",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "model": "qwen2.5:3b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        -2000,
+        -320
+      ],
+      "id": "e4d0f47f-2cce-4fc0-9481-ccadbc633119",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "6aNAhb62GAu8R8rG",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "qwen2.5:3b",
+          "mode": "list",
+          "cachedResultName": "qwen2.5:3b"
+        },
+        "messages": {
+          "values": [
+            {}
+          ]
+        },
+        "options": {
+          "system": "Anda adalah Customer Service dari bengkel motor Fit Motor Tegal.\nJawab pertanyaan pelanggan dengan sopan, ramah (bahasa sehari-hari), dan SANGAT SINGKAT (maksimal 2-3 kalimat).\n\nINFO BENGKEL:\n- Jam Buka: Senin s/d Sabtu (08:00 – 17:00 WIB). Hari Minggu/Libur TUTUP.\n- Syarat: HANYA terima motor Injeksi tahun 2010 ke atas. TIDAK TERIMA motor Karburator/2-Tak!\n- Layanan Jemput: Max jarak 7 km. (biaya mulai Rp 6.000 radius 2km).\n- Antrian prioritas untuk pelanggan yang booking/daftar terlebih dahulu.\n\nDAFTAR CABANG & NOMOR WA MASING-MASING:\n- Adiwerna  (Jl. Raya Adiwerna, Tegal)  → 0855-0994-1624\n- Cikditiro (Jl. Cikditiro, Tegal)       → 0811-3438-800\n- Pacul     (Jl. Pacul, Tegal)           → 0831-1610-5550\n- Pesalakan (Jl. Raya Pesalakan, Tegal)  → (segera hadir)\n- Trayeman  (Jl. Trayeman, Slawi, Tegal) → (segera hadir)\n\nATURAN PENTING:\n- Jika pelanggan sedang WA ke satu cabang tapi minta pindah ke cabang lain karena kejauhan, berikan nomor WA cabang yang lebih dekat dari daftar di atas.\n- Jika ada estimasi biaya atau hal yang tidak ada di panduan ini, suruh datang langsung agar dicek mekanik.\n- Jika hanya disapa \"halo/pagi\", balas salam lalu tawarkan \"Ada kendala apa dengan motornya Kak? Kami siap bantu!\""
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.ollama",
+      "typeVersion": 1,
+      "position": [
+        -1504,
+        -160
+      ],
+      "id": "90b45c6d-6534-4a0d-901e-7285646b4d21",
+      "name": "CS_Agent",
+      "alwaysOutputData": true,
+      "credentials": {
+        "ollamaApi": {
+          "id": "6aNAhb62GAu8R8rG",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "gowa",
+        "options": {}
+      },
+      "id": "ebe2da12-cf9a-41d4-96b3-8ed5486363f2",
+      "name": "GoWA Webhook1",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -3856,
+        -96
+      ],
+      "webhookId": "fitmotor-gowa-main"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT step_aktif, context_json \nFROM sesi_chat \nWHERE nomor_wa = '{{ $('Extract: nomor_wa & pesan').item.json.nomor_wa }}' \nAND status = 'aktif' \nAND last_activity > DATE_SUB(NOW(), INTERVAL 1 HOUR)\nAND '{{ $('Extract: nomor_wa & pesan').item.json.pesan }}' NOT REGEXP '(?i)(tanya|nanya|jam|buka|tutup|libur|batal|cancel|kembali|halo|hallo|allo|hai|hi|pagi|siang|malam|lokasi|alamat|harga|biaya|tarif|pindah)'\nLIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        -2336,
+        -544
+      ],
+      "id": "777decef-20c0-40c0-ba33-e0ba1d18da5c",
+      "name": "Cek Sesi Aktif",
+      "credentials": {
+        "mySql": {
+          "id": "On2uunDgsIP8TtL0",
+          "name": "FitMotor MySQL"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.step_aktif }}",
+                    "rightValue": "booking",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    },
+                    "id": "ac1b1234-abcd-efgh-ijkl-mnopqrstuvwx"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "booking"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.step_aktif }}",
+                    "rightValue": "jemput_antar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    },
+                    "id": "dc1b5678-abcd-efgh-ijkl-mnopqrstuvwx"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "jemput_antar"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Extract: nomor_wa & pesan').item.json.pesan.toUpperCase() }}",
+                    "rightValue": "BKG-",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    },
+                    "id": "bkg-global-intercept"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "cek_booking_bypass"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": 3
+        }
+      },
+      "id": "e2c3a5b6-7d8e-9f0g-1h2i-3j4k5l6m7n8o",
+      "name": "Arahkan Sesi",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        -2096,
+        -544
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/cek_booking_flow",
+        "sendBody": true,
+        "contentType": "json",
+        "options": {},
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"nomor_wa\": $('Extract: nomor_wa & pesan').item.json.nomor_wa, \"pesan\": $('Extract: nomor_wa & pesan').item.json.pesan, \"device_id\": $('Extract: nomor_wa & pesan').item.json.device_id, \"cabang_id\": $('Extract: nomor_wa & pesan').item.json.cabang_id } }}"
+      },
+      "id": "req-cek-booking",
+      "name": "Route: Cek Booking Flow",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -1152,
+        -152
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Filter: Pesan Masuk Valid": {
+      "main": [
+        [
+          {
+            "node": "Extract: nomor_wa & pesan",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Extract: nomor_wa & pesan": {
+      "main": [
+        [
+          {
+            "node": "MySQL: Cek Non-AI List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL: Cek Non-AI List": {
+      "main": [
+        [
+          {
+            "node": "Apakah Non-AI?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apakah Non-AI?": {
+      "main": [
+        [],
+        [
+          {
+            "node": "MySQL: Lookup Pelanggan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL: Lookup Pelanggan": {
+      "main": [
+        [
+          {
+            "node": "Set: Pelanggan Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set: Pelanggan Context": {
+      "main": [
+        [
+          {
+            "node": "AI Sedang Dijeda?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Sedang Dijeda?": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Cek Sesi Aktif",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Intent": {
+      "main": [
+        [
+          {
+            "node": "Route: Booking Flow",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Route: Jemput Antar Flow",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "CS_Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route: Booking Flow": {
+      "main": [
+        []
+      ]
+    },
+    "Route: Jemput Antar Flow": {
+      "main": [
+        []
+      ]
+    },
+    "GoWA: FAQ/Lainnya": {
+      "main": [
+        []
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Switch Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CS_Agent": {
+      "main": [
+        [
+          {
+            "node": "GoWA: FAQ/Lainnya",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GoWA Webhook1": {
+      "main": [
+        [
+          {
+            "node": "Filter: Pesan Masuk Valid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cek Sesi Aktif": {
+      "main": [
+        [
+          {
+            "node": "Arahkan Sesi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Arahkan Sesi": {
+      "main": [
+        [
+          {
+            "node": "Route: Booking Flow",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Route: Jemput Antar Flow",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Route: Cek Booking Flow",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "814f1d03-fe12-4a36-b5e9-08e74939bb08",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2a4578e7b1e5549cccb3f85145259d34b2719a5eabfe5d8ee15b6446ca4bde43"
+  },
+  "id": "SNiGuakieguvw1dx",
+  "tags": [
+    {
+      "updatedAt": "2026-04-11T22:33:16.108Z",
+      "createdAt": "2026-04-11T22:33:16.108Z",
+      "id": "yozSJypnLRI6ngTE",
+      "name": "fitmotor"
+    }
+  ]
+}

@@ -1,0 +1,628 @@
+{
+  "name": "FitMotor — 02 Booking Flow Baru",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "booking_flow",
+        "options": {}
+      },
+      "id": "webhook-booking",
+      "name": "Webhook (From Main Router)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -500,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT context_json FROM sesi_chat WHERE nomor_wa = '{{ $json.body.nomor_wa }}' AND status = 'aktif' LIMIT 1;",
+        "options": {}
+      },
+      "id": "mysql-get-session",
+      "name": "MySQL: Dapatkan Sesi",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        -300,
+        300
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "mySql": {
+          "id": "On2uunDgsIP8TtL0",
+          "name": "FitMotor MySQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "let text = $input.item.json.text || $input.item.json.content || '{}';\ntext = text.replace(/```json/gi, '').replace(/```/gi, '').trim();\nlet bongkar = {};\ntry {\n  bongkar = JSON.parse(text);\n} catch(e) {}\n\n// cabang_id SELALU diambil dari webhook (device_id), bukan dari AI\nconst cabang_from_device = $('Webhook (From Main Router)').item.json.body.cabang_id || \n                           ($('Webhook (From Main Router)').item.json.body.device_id || '').replace('fitmotor_', '');\n\nreturn [{ json: {\n  layanan: bongkar.layanan || '',\n  motor: bongkar.motor || '',\n  nopol: bongkar.nopol || '',\n  waktu: bongkar.waktu || '',\n  cabang_id: cabang_from_device,\n  alamat_jemput: bongkar.alamat_jemput || ''\n} }];"
+      },
+      "id": "code-parse",
+      "name": "Gemini: Ekstrak Data Booking",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        150,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.layanan }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "c2",
+              "leftValue": "={{ $json.motor }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "c3",
+              "leftValue": "={{ $json.waktu }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "c5",
+              "leftValue": "={{ $json.nopol }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-komplit",
+      "name": "IF: Data Lengkap?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        350,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO sesi_chat (id, nomor_wa, step_aktif, context_json, status, last_activity)\nVALUES (CONCAT('{{ $('Webhook (From Main Router)').item.json.body.nomor_wa }}', '_bkg'), '{{ $('Webhook (From Main Router)').item.json.body.nomor_wa }}', 'booking', '{{ JSON.stringify($json) }}', 'aktif', NOW())\nON DUPLICATE KEY UPDATE context_json = '{{ JSON.stringify($json) }}', last_activity = NOW();",
+        "options": {}
+      },
+      "id": "mysql-simpan-sesi",
+      "name": "MySQL: Simpan Draft",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        600,
+        100
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "On2uunDgsIP8TtL0",
+          "name": "FitMotor MySQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "deviceIdOverride": "={{ $('Webhook (From Main Router)').item.json.body.device_id }}",
+        "phoneNumber": "={{ $('Webhook (From Main Router)').item.json.body.nomor_wa }}",
+        "message": "={{ 'Halo kak! Untuk booking servis di Cabang ' + ($('Webhook (From Main Router)').item.json.body.cabang_id || '').charAt(0).toUpperCase() + ($('Webhook (From Main Router)').item.json.body.cabang_id || '').slice(1) + ', mohon bantu melengkapi data berikut ya:\\n\\n' + ($json.motor ? '' : '- Motor apa?\\n') + ($json.nopol ? '' : '- Plat nomor berapa?\\n') + ($json.layanan ? '' : '- Mau servis apa?\\n') + ($json.waktu ? '' : '- Ingin datang kapan?\\n') }}"
+      },
+      "id": "gowa-minta-data",
+      "name": "GoWA: Minta Data",
+      "type": "@aldinokemal2104/n8n-nodes-gowa.gowa",
+      "typeVersion": 1,
+      "position": [
+        900,
+        100
+      ],
+      "credentials": {
+        "goWhatsappApi": {
+          "id": "iwMVuTKnzKkCBH6T",
+          "name": "FitMotor GoWA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE sesi_chat SET status = 'selesai' WHERE nomor_wa = '{{ $('Webhook (From Main Router)').item.json.body.nomor_wa }}' AND status = 'aktif';",
+        "options": {}
+      },
+      "id": "mysql-selesai-sesi",
+      "name": "MySQL: Tandai Selesai",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        600,
+        500
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "On2uunDgsIP8TtL0",
+          "name": "FitMotor MySQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CALL cek_nopol_aktif(\n  '{{ $('Gemini: Ekstrak Data Booking').item.json.nopol }}',\n  '{{ $('Gemini: Ekstrak Data Booking').item.json.cabang_id }}',\n  @is_blocked, @kode, @cabang_lain\n);\nSELECT @is_blocked AS is_blocked, @kode AS kode_existing, @cabang_lain AS cabang_existing;",
+        "options": {}
+      },
+      "id": "cek-nopol-aktif",
+      "name": "MySQL: Cek Nopol Aktif",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        850,
+        500
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "On2uunDgsIP8TtL0",
+          "name": "FitMotor MySQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {},
+          "conditions": [
+            {
+              "id": "blocked",
+              "leftValue": "={{ $json.is_blocked }}",
+              "rightValue": 1,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-nopol-blocked",
+      "name": "IF: Nopol Terdaftar di Cabang Lain?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1050,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "deviceIdOverride": "={{ $('Webhook (From Main Router)').item.json.body.device_id }}",
+        "phoneNumber": "={{ $('Webhook (From Main Router)').item.json.body.nomor_wa }}",
+        "message": "={{ 'Mohon maaf Kak, plat nomor *' + $('Gemini: Ekstrak Data Booking').item.json.nopol + '* sudah memiliki booking aktif di Cabang *' + ($('MySQL: Cek Nopol Aktif').item.json.cabang_existing || '').charAt(0).toUpperCase() + ($('MySQL: Cek Nopol Aktif').item.json.cabang_existing || '').slice(1) + '* dengan kode *' + $('MySQL: Cek Nopol Aktif').item.json.kode_existing + '*.' + '\\n\\nMohon konfirmasi ke cabang tersebut ya, atau batalkan booking lama dahulu sebelum booking baru. 🙏' }}"
+      },
+      "id": "gowa-duplikat",
+      "name": "GoWA: Kirim Notif Duplikat",
+      "type": "@aldinokemal2104/n8n-nodes-gowa.gowa",
+      "typeVersion": 1,
+      "position": [
+        1250,
+        300
+      ],
+      "credentials": {
+        "goWhatsappApi": {
+          "id": "iwMVuTKnzKkCBH6T",
+          "name": "FitMotor GoWA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CALL cek_kapasitas('{{ $('Gemini: Ekstrak Data Booking').item.json.cabang_id || 'adiwerna' }}', CURDATE(), @terpakai, @kapasitas, @tersedia);\nSELECT @tersedia AS is_available;",
+        "options": {}
+      },
+      "id": "cek-kapasitas",
+      "name": "MySQL: Cek Kapasitas Cabang",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        1250,
+        700
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "On2uunDgsIP8TtL0",
+          "name": "FitMotor MySQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {},
+          "conditions": [
+            {
+              "id": "tersedia",
+              "leftValue": "={{ $json.is_available }}",
+              "rightValue": 1,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-kapasitas",
+      "name": "Kapasitas Ada?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1450,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "deviceIdOverride": "={{ $('Webhook (From Main Router)').item.json.body.device_id }}",
+        "phoneNumber": "={{ $('Webhook (From Main Router)').item.json.body.nomor_wa }}",
+        "message": "Maaf kak, bengkel cabang ini sudah penuh untuk hari ini. Silakan coba untuk booking besok."
+      },
+      "id": "gowa-penuh",
+      "name": "GoWA: Kirim Notif Penuh",
+      "type": "@aldinokemal2104/n8n-nodes-gowa.gowa",
+      "typeVersion": 1,
+      "position": [
+        1650,
+        500
+      ],
+      "credentials": {
+        "goWhatsappApi": {
+          "id": "iwMVuTKnzKkCBH6T",
+          "name": "FitMotor GoWA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO booking (id, nopol, nama_pelanggan, nomor_wa, cabang_id, waktu_booking, layanan, status)\nVALUES (\n  '{{ $('Code: Generate Kode').item.json.kode_booking }}',\n  '{{ $('Gemini: Ekstrak Data Booking').item.json.nopol }}',\n  '{{ $('Webhook (From Main Router)').item.json.body.nama_pelanggan || 'Pelanggan' }}',\n  '{{ $('Webhook (From Main Router)').item.json.body.nomor_wa }}',\n  '{{ $('Gemini: Ekstrak Data Booking').item.json.cabang_id }}',\n  '{{ $('Gemini: Ekstrak Data Booking').item.json.waktu }}',\n  '{{ $('Gemini: Ekstrak Data Booking').item.json.layanan }}',\n  'pending'\n);",
+        "options": {}
+      },
+      "id": "insert-booking",
+      "name": "MySQL: Insert Booking",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        1650,
+        900
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "On2uunDgsIP8TtL0",
+          "name": "FitMotor MySQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "deviceIdOverride": "={{ $('Webhook (From Main Router)').item.json.body.device_id }}",
+        "phoneNumber": "={{ $('Webhook (From Main Router)').item.json.body.nomor_wa }}",
+        "message": "={{ 'Alhamdulillah, booking servis *' + $('Gemini: Ekstrak Data Booking').item.json.layanan + '* sudah terkonfirmasi! 🎉\\n\\n' + '📋 Motor: ' + $('Gemini: Ekstrak Data Booking').item.json.motor + '\\n' + '🏍️ Plat: *' + $('Gemini: Ekstrak Data Booking').item.json.nopol + '*\\n' + '📅 Jadwal: ' + $('Gemini: Ekstrak Data Booking').item.json.waktu + '\\n' + '📍 Cabang: *' + ($('Gemini: Ekstrak Data Booking').item.json.cabang_id || '').charAt(0).toUpperCase() + ($('Gemini: Ekstrak Data Booking').item.json.cabang_id || '').slice(1) + '*\\n\\n' + '🎟️ *KODE BOOKING: ' + $('Code: Generate Kode').item.json.kode_booking + '*\\n\\n' + 'Tunjukkan kode ini ke kasir saat kedatangan ya Kak! Kami tunggu 😁' }}"
+      },
+      "id": "gowa-sukses",
+      "name": "GoWA: Konfirmasi Booking",
+      "type": "@aldinokemal2104/n8n-nodes-gowa.gowa",
+      "typeVersion": 1,
+      "position": [
+        1850,
+        900
+      ],
+      "credentials": {
+        "goWhatsappApi": {
+          "id": "iwMVuTKnzKkCBH6T",
+          "name": "FitMotor GoWA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Webhook (From Main Router)').item.json.body.pesan }}\n\n[INFO SISTEM TANGGAL SAAT INI: {{ $now.setZone('Asia/Jakarta').toFormat('yyyy-MM-dd HH:mm:ss') }}]\nData Kendaraan Terdaftar (Gunakan jika tidak disebut lain): Motor {{ $('Webhook (From Main Router)').item.json.body.motor }}, Nopol {{ $('Webhook (From Main Router)').item.json.body.nopol }}\nData Sesi Sebelumnya:\n{{ $('MySQL: Dapatkan Sesi').item.json.context_json || '{}' }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=Anda adalah AI bengkel Fit Motor. Ekstrak data servis dari kalimat pelanggan.\nGabungkan dengan 'Data Sesi Sebelumnya' jika ada.\n\nFORMAT WAKTU WAJIB: YYYY-MM-DD HH:mm:00 (Jika disebut besok, tambah 1 hari dari Waktu Saat Ini. Jika tanpa jam, default 09:00:00).\n\nJANGAN tanya tentang cabang — cabang sudah otomatis terdeteksi dari nomor WA yang dihubungi pelanggan.\n\nBalas HANYA JSON murni (Tanpa awalan markdown blok).\nContoh output (jangan ubah key):\n{\n  \"layanan\": \"\",\n  \"motor\": \"\",\n  \"waktu\": \"\",\n  \"nopol\": \"\"\n}"
+            }
+          ]
+        }
+      },
+      "id": "llm-chain",
+      "name": "Ollama: Ekstrak Data",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [
+        -50,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "model": "qwen2.5:3b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        -50,
+        500
+      ],
+      "id": "ollama-model",
+      "name": "Ollama Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "6aNAhb62GAu8R8rG",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO pelanggan (nomor_wa, nama, nopol, motor, cabang_default)\nVALUES (\n  '{{ $('Webhook (From Main Router)').item.json.body.nomor_wa }}',\n  '{{ $('Webhook (From Main Router)').item.json.body.nama_pelanggan || 'Pelanggan' }}',\n  '{{ $('Gemini: Ekstrak Data Booking').item.json.nopol }}',\n  '{{ $('Gemini: Ekstrak Data Booking').item.json.motor }}',\n  '{{ $('Gemini: Ekstrak Data Booking').item.json.cabang_id }}'\n)\nON DUPLICATE KEY UPDATE \n  nopol          = VALUES(nopol), \n  motor          = VALUES(motor),\n  cabang_default = VALUES(cabang_default),\n  updated_at     = NOW();",
+        "options": {}
+      },
+      "id": "mysql-simpan-pelanggan-02",
+      "name": "MySQL: Update Database Pelanggan",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        950,
+        400
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "On2uunDgsIP8TtL0",
+          "name": "FitMotor MySQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const kode = 'BKG-' + Date.now().toString().slice(-6);\nreturn [{ json: { kode_booking: kode } }];"
+      },
+      "id": "gen-kode-new-02",
+      "name": "Code: Generate Kode",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        850
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook (From Main Router)": {
+      "main": [
+        [
+          {
+            "node": "MySQL: Dapatkan Sesi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL: Dapatkan Sesi": {
+      "main": [
+        [
+          {
+            "node": "Ollama: Ekstrak Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama: Ekstrak Data": {
+      "main": [
+        [
+          {
+            "node": "Gemini: Ekstrak Data Booking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini: Ekstrak Data Booking": {
+      "main": [
+        [
+          {
+            "node": "IF: Data Lengkap?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Data Lengkap?": {
+      "main": [
+        [
+          {
+            "node": "MySQL: Tandai Selesai",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "MySQL: Simpan Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL: Simpan Draft": {
+      "main": [
+        [
+          {
+            "node": "GoWA: Minta Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL: Tandai Selesai": {
+      "main": [
+        [
+          {
+            "node": "MySQL: Cek Nopol Aktif",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL: Cek Nopol Aktif": {
+      "main": [
+        [
+          {
+            "node": "IF: Nopol Terdaftar di Cabang Lain?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Nopol Terdaftar di Cabang Lain?": {
+      "main": [
+        [
+          {
+            "node": "GoWA: Kirim Notif Duplikat",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "MySQL: Cek Kapasitas Cabang",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL: Cek Kapasitas Cabang": {
+      "main": [
+        [
+          {
+            "node": "Kapasitas Ada?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Kapasitas Ada?": {
+      "main": [
+        [
+          {
+            "node": "Code: Generate Kode",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "GoWA: Kirim Notif Penuh",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL: Insert Booking": {
+      "main": [
+        [
+          {
+            "node": "MySQL: Update Database Pelanggan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Ollama: Ekstrak Data",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL: Update Database Pelanggan": {
+      "main": [
+        [
+          {
+            "node": "GoWA: Konfirmasi Booking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Generate Kode": {
+      "main": [
+        [
+          {
+            "node": "MySQL: Insert Booking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "fitmotor"
+    }
+  ],
+  "versionId": "v1"
+}

@@ -1,0 +1,596 @@
+{
+  "name": "FitMotor — 03 Jemput Antar Flow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "jemput_antar_flow",
+        "options": {}
+      },
+      "id": "webhook-jemput",
+      "name": "Webhook (From Main Router)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -500,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT context_json FROM sesi_chat WHERE nomor_wa = '{{ $json.body.nomor_wa }}' AND status = 'aktif' LIMIT 1;",
+        "options": {}
+      },
+      "id": "mysql-get-session",
+      "name": "MySQL: Dapatkan Sesi",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        -300,
+        300
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "mySql": {
+          "id": "On2uunDgsIP8TtL0",
+          "name": "FitMotor MySQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "let text = $input.item.json.text || $input.item.json.content || '{}';\ntext = text.replace(/```json/gi, '').replace(/```/gi, '').trim();\nlet bongkar = {};\ntry { bongkar = JSON.parse(text); } catch(e) {}\n\n// cabang_id SELALU dari device_id webhook, bukan dari AI\nconst cabang_from_device = $('Webhook (From Main Router)').item.json.body.cabang_id\n  || ($('Webhook (From Main Router)').item.json.body.device_id || '').replace('fitmotor_', '');\n\nreturn [{ json: {\n  layanan: bongkar.layanan || '',\n  motor: bongkar.motor || '',\n  nopol: bongkar.nopol || '',\n  waktu: bongkar.waktu || '',\n  cabang_id: cabang_from_device,\n  alamat_jemput: bongkar.alamat_jemput || ''\n} }];"
+      },
+      "id": "code-parse",
+      "name": "Gemini: Ekstrak Data Jemput",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        150,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.layanan }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "c2",
+              "leftValue": "={{ $json.motor }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "c3",
+              "leftValue": "={{ $json.nopol }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "c4",
+              "leftValue": "={{ $json.alamat_jemput }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-komplit",
+      "name": "IF: Data Lengkap?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        350,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO sesi_chat (id, nomor_wa, step_aktif, context_json, status, last_activity)\nVALUES (CONCAT('{{ $('Webhook (From Main Router)').item.json.body.nomor_wa }}', '_jmp'), '{{ $('Webhook (From Main Router)').item.json.body.nomor_wa }}', 'jemput_antar', '{{ JSON.stringify($json) }}', 'aktif', NOW())\nON DUPLICATE KEY UPDATE context_json = '{{ JSON.stringify($json) }}', last_activity = NOW();",
+        "options": {}
+      },
+      "id": "mysql-simpan-sesi",
+      "name": "MySQL: Simpan Draft",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        600,
+        100
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "On2uunDgsIP8TtL0",
+          "name": "FitMotor MySQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "deviceIdOverride": "={{ $('Webhook (From Main Router)').item.json.body.device_id }}",
+        "phoneNumber": "={{ $('Webhook (From Main Router)').item.json.body.nomor_wa }}",
+        "message": "={{ 'Halo kak! Untuk layanan Jemput Antar / Mogok, mohon lengkapi:\\n\\n' + ($json.motor ? '' : '- Motor apa?\\n') + ($json.nopol ? '' : '- Plat nomor berapa?\\n') + ($json.layanan ? '' : '- Kendala motornya apa?\\n') + ($json.alamat_jemput ? '' : '- Posisi / alamat jemput (patokan)?\\n') }}"
+      },
+      "id": "gowa-minta-data",
+      "name": "GoWA: Minta Data",
+      "type": "@aldinokemal2104/n8n-nodes-gowa.gowa",
+      "typeVersion": 1,
+      "position": [
+        850,
+        100
+      ],
+      "credentials": {
+        "goWhatsappApi": {
+          "id": "iwMVuTKnzKkCBH6T",
+          "name": "FitMotor GoWA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE sesi_chat SET status = 'selesai' WHERE nomor_wa = '{{ $('Webhook (From Main Router)').item.json.body.nomor_wa }}' AND status = 'aktif';",
+        "options": {}
+      },
+      "id": "mysql-selesai-sesi",
+      "name": "MySQL: Tandai Selesai",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        550,
+        500
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "On2uunDgsIP8TtL0",
+          "name": "FitMotor MySQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT koordinat_lat, koordinat_lng FROM cabang WHERE id = '{{ $('Gemini: Ekstrak Data Jemput').item.json.cabang_id || 'adiwerna' }}' LIMIT 1;",
+        "options": {}
+      },
+      "id": "get-cabang",
+      "name": "MySQL: Info Cabang",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        800,
+        500
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "On2uunDgsIP8TtL0",
+          "name": "FitMotor MySQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://maps.googleapis.com/maps/api/distancematrix/json",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "origins",
+              "value": "={{ $('Gemini: Ekstrak Data Jemput').item.json.alamat_jemput }}"
+            },
+            {
+              "name": "destinations",
+              "value": "={{ $json.koordinat_lat }},{{ $json.koordinat_lng }}"
+            },
+            {
+              "name": "key",
+              "value": "KODE_API_GMAPS_TARUH_DISINI_NANTI"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "gmaps-distance",
+      "name": "Google Maps: Hitung Jarak",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1000,
+        500
+      ],
+      "alwaysOutputData": true,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "try {\n  const dist = $input.item.json.rows[0].elements[0];\n  if (dist.status !== 'OK') return [{ json: { error: true, msg: 'Alamat tidak ditemukan' } }];\n  \n  const km = dist.distance.value / 1000;\n  const max_km = 7;\n  const min_biaya = 6000;\n  const rate_km = 3000;\n  \n  if (km > max_km) return [{ json: { out_of_range: true, km } }];\n  \n  let biaya = km <= 2 ? min_biaya : Math.ceil(km) * rate_km;\n  return [{ json: { error: false, out_of_range: false, km, biaya, durasi: dist.duration.text } }];\n} catch(e) {\n  // Simulasi jika API bermasalah/Kosong\n  let biaya = 15000;\n  return [{ json: { error: false, out_of_range: false, km: 3.5, biaya: biaya, durasi: '15 mins' } }];\n}"
+      },
+      "id": "calc-biaya",
+      "name": "Code: Hitung Biaya",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {},
+          "conditions": [
+            {
+              "id": "out",
+              "leftValue": "={{ $json.out_of_range }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-range",
+      "name": "Luar Jangkauan?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1400,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "deviceIdOverride": "={{ $('Webhook (From Main Router)').item.json.body.device_id }}",
+        "phoneNumber": "={{ $('Webhook (From Main Router)').item.json.body.nomor_wa }}",
+        "message": "Maaf kak, jarak lokasi penjemputan terlalu jauh dari cabang. Maksimal 7 km ya kak."
+      },
+      "id": "gowa-tolak",
+      "name": "GoWA: Kirim Tolak",
+      "type": "@aldinokemal2104/n8n-nodes-gowa.gowa",
+      "typeVersion": 1,
+      "position": [
+        1650,
+        300
+      ],
+      "credentials": {
+        "goWhatsappApi": {
+          "id": "iwMVuTKnzKkCBH6T",
+          "name": "FitMotor GoWA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO booking (id, nopol, nama_pelanggan, nomor_wa, cabang_id, waktu_booking, layanan, status_jemput, jarak_km, biaya_jemput, alamat_jemput, status)\nVALUES ('{{ $('Code: Generate Kode').item.json.kode_booking }}', '{{ $('Gemini: Ekstrak Data Jemput').item.json.nopol }}', '{{ $('Webhook (From Main Router)').item.json.body.nama_pelanggan || 'Pelanggan' }}', '{{ $('Webhook (From Main Router)').item.json.body.nomor_wa }}', '{{ $('Gemini: Ekstrak Data Jemput').item.json.cabang_id || 'adiwerna' }}', NOW(), '{{ $('Gemini: Ekstrak Data Jemput').item.json.layanan }}', 'jemput_antar', {{ $('Code: Hitung Biaya').item.json.km }}, {{ $('Code: Hitung Biaya').item.json.biaya }}, '{{ $('Gemini: Ekstrak Data Jemput').item.json.alamat_jemput }}', 'pending');",
+        "options": {}
+      },
+      "id": "insert-booking",
+      "name": "MySQL: Insert Booking",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        1650,
+        600
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "On2uunDgsIP8TtL0",
+          "name": "FitMotor MySQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "deviceIdOverride": "={{ $('Webhook (From Main Router)').item.json.body.device_id }}",
+        "phoneNumber": "={{ $('Webhook (From Main Router)').item.json.body.nomor_wa }}",
+        "message": "={{ 'Baik kak, montir segera jalan menuju titik jemput.\\nPerkiraan biaya jemput-antar: Rp ' + $('Code: Hitung Biaya').item.json.biaya + ' dengan estimasi kedatangan ' + $('Code: Hitung Biaya').item.json.durasi + '.\\n\\n🎟️ *KODE ODER: ' + $('Code: Generate Kode').item.json.kode_booking + '*\\n\\nMohon tunggu kedatangan tim kami ya! 🙏' }}"
+      },
+      "id": "gowa-sukses",
+      "name": "GoWA: Kirim Sukses",
+      "type": "@aldinokemal2104/n8n-nodes-gowa.gowa",
+      "typeVersion": 1,
+      "position": [
+        1850,
+        600
+      ],
+      "credentials": {
+        "goWhatsappApi": {
+          "id": "iwMVuTKnzKkCBH6T",
+          "name": "FitMotor GoWA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Webhook (From Main Router)').item.json.body.pesan }}\n\n[INFO SISTEM TANGGAL SAAT INI: {{ $now.setZone('Asia/Jakarta').toFormat('yyyy-MM-dd HH:mm:ss') }}]\nData Kendaraan Terdaftar (Gunakan jika tidak disebut lain): Motor {{ $('Webhook (From Main Router)').item.json.body.motor }}, Nopol {{ $('Webhook (From Main Router)').item.json.body.nopol }}\nData Sesi Sebelumnya:\n{{ $('MySQL: Dapatkan Sesi').item.json.context_json || '{}' }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=Anda adalah AI bengkel Fit Motor. Ekstrak data servis jemput dari kalimat pelanggan. Jika tidak spesifik cabang, biarkan kosong.\nBalas HANYA JSON murni (tanpa markdown).\nContoh output (jangan hapus key):\n{\n  \"layanan\": \"\",\n  \"motor\": \"\",\n  \"nopol\": \"\",\n  \"alamat_jemput\": \"\",\n  \"cabang_id\": \"\"\n}"
+            }
+          ]
+        }
+      },
+      "id": "llm-chain",
+      "name": "Ollama: Ekstrak Data",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [
+        -50,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "model": "qwen2.5:3b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        -50,
+        500
+      ],
+      "id": "ollama-model",
+      "name": "Ollama Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "6aNAhb62GAu8R8rG",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO pelanggan (nomor_wa, nama, nopol, motor, pernah_jemput, alamat_jemput_terakhir)\nVALUES ('{{ $('Webhook (From Main Router)').item.json.body.nomor_wa }}', '{{ $('Webhook (From Main Router)').item.json.body.nama_pelanggan || 'Pelanggan' }}', '{{ $('Gemini: Ekstrak Data Jemput').item.json.nopol }}', '{{ $('Gemini: Ekstrak Data Jemput').item.json.motor }}', 1, '{{ $('Gemini: Ekstrak Data Jemput').item.json.alamat_jemput }}')\nON DUPLICATE KEY UPDATE nopol = VALUES(nopol), motor = VALUES(motor), pernah_jemput = 1, alamat_jemput_terakhir = VALUES(alamat_jemput_terakhir);",
+        "options": {}
+      },
+      "id": "mysql-simpan-pelanggan-03",
+      "name": "MySQL: Update Database Pelanggan",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        1800,
+        600
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "On2uunDgsIP8TtL0",
+          "name": "FitMotor MySQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const kode = 'BKG-' + Date.now().toString().slice(-6);\nreturn [{ json: { kode_booking: kode } }];"
+      },
+      "id": "gen-kode-new-03",
+      "name": "Code: Generate Kode",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        550
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook (From Main Router)": {
+      "main": [
+        [
+          {
+            "node": "MySQL: Dapatkan Sesi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL: Dapatkan Sesi": {
+      "main": [
+        [
+          {
+            "node": "Ollama: Ekstrak Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama: Ekstrak Data": {
+      "main": [
+        [
+          {
+            "node": "Gemini: Ekstrak Data Jemput",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini: Ekstrak Data Jemput": {
+      "main": [
+        [
+          {
+            "node": "IF: Data Lengkap?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Data Lengkap?": {
+      "main": [
+        [
+          {
+            "node": "MySQL: Tandai Selesai",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "MySQL: Simpan Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL: Simpan Draft": {
+      "main": [
+        [
+          {
+            "node": "GoWA: Minta Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL: Tandai Selesai": {
+      "main": [
+        [
+          {
+            "node": "MySQL: Info Cabang",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL: Info Cabang": {
+      "main": [
+        [
+          {
+            "node": "Google Maps: Hitung Jarak",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Maps: Hitung Jarak": {
+      "main": [
+        [
+          {
+            "node": "Code: Hitung Biaya",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Hitung Biaya": {
+      "main": [
+        [
+          {
+            "node": "Luar Jangkauan?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Luar Jangkauan?": {
+      "main": [
+        [
+          {
+            "node": "GoWA: Kirim Tolak",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code: Generate Kode",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL: Insert Booking": {
+      "main": [
+        [
+          {
+            "node": "MySQL: Update Database Pelanggan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Ollama: Ekstrak Data",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL: Update Database Pelanggan": {
+      "main": [
+        [
+          {
+            "node": "GoWA: Kirim Sukses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Generate Kode": {
+      "main": [
+        [
+          {
+            "node": "MySQL: Insert Booking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "fitmotor"
+    }
+  ],
+  "versionId": "v1"
+}

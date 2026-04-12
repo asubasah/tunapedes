@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  gowa:
+    image: aldinokemal/go-whatsapp-web-multidevice:latest
+    container_name: fitmotor_gowa
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./gowa_storages:/app/storages
+    command: ["rest", "--webhook=http://172.17.0.1:3002/webhook/gowa"]
+    # Catatan: 172.17.0.1 merujuk ke Docker Host IP, tempat PM2 (server.js) berjalan di port 3002

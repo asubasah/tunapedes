@@ -1,0 +1,357 @@
+{
+  "name": "FitMotor — 05 Status Pelacakan",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cek_booking_flow",
+        "options": {}
+      },
+      "id": "webhook-05",
+      "name": "Webhook (From Main Router)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const pesan = $input.item.json.body.pesan || '';\nconst wa = $input.item.json.body.nomor_wa;\nconst m = pesan.match(/BKG-\\d+/i);\nreturn [{ json: { kode: m ? m[0].toUpperCase() : null, nomor_wa: wa } }];"
+      },
+      "id": "extract-bkg",
+      "name": "Code: Cari Pola BKG-",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {},
+          "conditions": [
+            {
+              "id": "1",
+              "leftValue": "={{ $json.kode }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ]
+        }
+      },
+      "id": "if-exist",
+      "name": "Ada Kode di Teks?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        400,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "deviceIdOverride": "={{ $('Webhook (From Main Router)').item.json.body.device_id }}",
+        "phoneNumber": "={{ $json.nomor_wa }}",
+        "message": "Maaf kak, sistem kami tidak menemukan kode booking pada pesan Anda. Mohon sertakan kode tiket (contoh format: BKG-123456) untuk mengecek status servis."
+      },
+      "id": "gowa-no-code",
+      "name": "GoWA: Ga Ketemu Format",
+      "type": "@aldinokemal2104/n8n-nodes-gowa.gowa",
+      "typeVersion": 1,
+      "position": [
+        600,
+        0
+      ],
+      "credentials": {
+        "goWhatsappApi": {
+          "id": "iwMVuTKnzKkCBH6T",
+          "name": "FitMotor GoWA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM booking WHERE id = '{{ $json.kode }}' LIMIT 1;",
+        "options": {}
+      },
+      "id": "mysql-cek-bkg",
+      "name": "MySQL: Cari ID Booking",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        600,
+        200
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "mySql": {
+          "id": "On2uunDgsIP8TtL0",
+          "name": "FitMotor MySQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {},
+          "conditions": [
+            {
+              "id": "1",
+              "leftValue": "={{ $json.id }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ]
+        }
+      },
+      "id": "if-database",
+      "name": "Ketemu di DB?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        800,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "deviceIdOverride": "={{ $('Webhook (From Main Router)').item.json.body.device_id }}",
+        "phoneNumber": "={{ $('Webhook (From Main Router)').item.json.body.nomor_wa }}",
+        "message": "={{ 'Mohon maaf kak, kode booking ' + $('Code: Cari Pola BKG-').item.json.kode + ' tidak terdaftar dalam database kami.' }}"
+      },
+      "id": "gowa-no-db",
+      "name": "GoWA: Tidak Ditemukan",
+      "type": "@aldinokemal2104/n8n-nodes-gowa.gowa",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        50
+      ],
+      "credentials": {
+        "goWhatsappApi": {
+          "id": "iwMVuTKnzKkCBH6T",
+          "name": "FitMotor GoWA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {},
+          "conditions": [
+            {
+              "id": "1",
+              "leftValue": "={{ $json.nomor_wa }}",
+              "rightValue": "={{ $('Webhook (From Main Router)').item.json.body.nomor_wa }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      },
+      "id": "if-pemilik",
+      "name": "Pemilik Asli?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "deviceIdOverride": "={{ $('Webhook (From Main Router)').item.json.body.device_id }}",
+        "phoneNumber": "={{ $('Webhook (From Main Router)').item.json.body.nomor_wa }}",
+        "message": "={{ 'Status Reservasi: ' + $('Code: Cari Pola BKG-').item.json.kode + ' adalah *' + $json.status.toUpperCase() + '*. \\n\\nDemi privasi data pelanggan kami, detail layanan servis bengkel tersebut hanya bisa kami infokan ke nomor WhatsApp resmi sang pemesan asli.' }}"
+      },
+      "id": "gowa-penguntit",
+      "name": "GoWA: Info Anonim",
+      "type": "@aldinokemal2104/n8n-nodes-gowa.gowa",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        0
+      ],
+      "credentials": {
+        "goWhatsappApi": {
+          "id": "iwMVuTKnzKkCBH6T",
+          "name": "FitMotor GoWA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "deviceIdOverride": "={{ $('Webhook (From Main Router)').item.json.body.device_id }}",
+        "phoneNumber": "={{ $json.nomor_wa }}",
+        "message": "={{ '⚠️ *ALARM PRIVASI DATA!*\\nBarusan saja terdapat percobaan pelacakan status atas nama Booking Anda (' + $json.id + ') oleh nomor anonim (+' + $('Webhook (From Main Router)').item.json.body.nomor_wa + ').\\n\\nJangan khawatir kak, data riwayat plat dan servis motor kesayangan Anda sangat aman di database kami karena sistem menolaknya secara otomatis.' }}"
+      },
+      "id": "gowa-asli-alert",
+      "name": "GoWA: Kirim Alarm Pemilik",
+      "type": "@aldinokemal2104/n8n-nodes-gowa.gowa",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        150
+      ],
+      "credentials": {
+        "goWhatsappApi": {
+          "id": "iwMVuTKnzKkCBH6T",
+          "name": "FitMotor GoWA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "let st = $input.item.json.status || 'pending';\nlet msg = '';\nif (st === 'pending') {\n  msg = 'Jadwal servis booking Anda tercatat aman! Ditunggu segera kedatangan motor Anda di cabang ' + $input.item.json.cabang_id + ' ya kak.';\n} else if (st === 'proses') {\n  msg = 'Motor kesayangan Anda (' + $input.item.json.nopol + ') sedang dikerjakan sepenuh hati oleh mekanik ahli kami! Silakan ditunggu, nanti segera kami infokan ya.';\n} else if (st === 'selesai' || st === 'selesaish') {\n  msg = 'MANTAB! Motor Anda sudah Selesai (*SELESAI*) diservis! Mesin sudah sehat dan siap ngebut lagi. Silakan diambil di bengkel sekarang ya kak! 🎉';\n} else if (st === 'batal') {\n  msg = 'Layanan booking servis sudah dibatalkan di sistem server kami. Apabila Anda tidak merasa membatalkannya, harap konfirmasi ulang kepada CS kami ya kak.';\n} else {\n  msg = 'Status Servis Anda saat ini termonitor dalam status: *' + st.toUpperCase() + '*.';\n}\n\nreturn [{ json: { text: msg } }];"
+      },
+      "id": "code-status-logic",
+      "name": "Code: Status Interpreter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        350
+      ]
+    },
+    {
+      "parameters": {
+        "deviceIdOverride": "={{ $('Webhook (From Main Router)').item.json.body.device_id }}",
+        "phoneNumber": "={{ $('Webhook (From Main Router)').item.json.body.nomor_wa }}",
+        "message": "={{ '✅ *PAPAN PELACAKAN SERVIS*\\nID Booking: ' + $('Code: Cari Pola BKG-').item.json.kode + '\\nLayanan: ' + $('Ketemu di DB?').item.json.layanan + '\\n\\n💬 Status Terkini: ' + $json.text }}"
+      },
+      "id": "gowa-pelacakan",
+      "name": "GoWA: Live Tracking",
+      "type": "@aldinokemal2104/n8n-nodes-gowa.gowa",
+      "typeVersion": 1,
+      "position": [
+        1400,
+        350
+      ],
+      "credentials": {
+        "goWhatsappApi": {
+          "id": "iwMVuTKnzKkCBH6T",
+          "name": "FitMotor GoWA"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook (From Main Router)": {
+      "main": [
+        [
+          {
+            "node": "Code: Cari Pola BKG-",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Cari Pola BKG-": {
+      "main": [
+        [
+          {
+            "node": "Ada Kode di Teks?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ada Kode di Teks?": {
+      "main": [
+        [
+          {
+            "node": "MySQL: Cari ID Booking",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "GoWA: Ga Ketemu Format",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL: Cari ID Booking": {
+      "main": [
+        [
+          {
+            "node": "Ketemu di DB?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ketemu di DB?": {
+      "main": [
+        [
+          {
+            "node": "Pemilik Asli?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "GoWA: Tidak Ditemukan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pemilik Asli?": {
+      "main": [
+        [
+          {
+            "node": "Code: Status Interpreter",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "GoWA: Info Anonim",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GoWA: Kirim Alarm Pemilik",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Status Interpreter": {
+      "main": [
+        [
+          {
+            "node": "GoWA: Live Tracking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

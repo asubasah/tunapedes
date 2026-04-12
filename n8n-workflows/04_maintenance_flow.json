@@ -1,0 +1,211 @@
+{
+  "name": "FitMotor — 04 Maintenance Flow",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "0 6 * * *" }] }
+      },
+      "id": "cron-reminder",
+      "name": "Setiap Jam 06:00",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM v_reminder_pending LIMIT 50;",
+        "options": {}
+      },
+      "id": "mysql-reminder",
+      "name": "MySQL: Get Pending Reminders",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [460, 200],
+      "credentials": { "mySql": { "id": "fitmotor-mysql", "name": "FitMotor MySQL" } }
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "loop-reminder",
+      "name": "Loop Reminders",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [680, 200]
+    },
+    {
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $json.nomor_wa }}@s.whatsapp.net",
+        "content": "={{ 'Pagi kak ' + $json.nama_pelanggan + '! Jangan lupa hari ini jadwal servis motor ' + $json.nopol + ' (' + $json.layanan + ') di Fit Motor cabang ' + $json.nama_cabang + ' ya. Ditunggu kedatangannya! 🏍️✨' }}",
+        "options": {}
+      },
+      "id": "gowa-reminder",
+      "name": "GoWA: Kirim Reminder",
+      "type": "@aldinokemal2104/n8n-nodes-gowa.gowa",
+      "typeVersion": 1,
+      "position": [900, 200],
+      "credentials": { "gowaApi": { "id": "fitmotor-gowa", "name": "FitMotor GoWA" } }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE booking SET reminder_sent = 1 WHERE id = '{{ $json.id }}';",
+        "options": {}
+      },
+      "id": "update-reminder",
+      "name": "MySQL: Update Reminder",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [1120, 200],
+      "credentials": { "mySql": { "id": "fitmotor-mysql", "name": "FitMotor MySQL" } }
+    },
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "0 */6 * * *" }] }
+      },
+      "id": "cron-ghosting",
+      "name": "Tiap 6 Jam",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [240, 500]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM v_ghosting_pending LIMIT 50;",
+        "options": {}
+      },
+      "id": "mysql-ghosting",
+      "name": "MySQL: Get Ghosting",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [460, 500],
+      "credentials": { "mySql": { "id": "fitmotor-mysql", "name": "FitMotor MySQL" } }
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "loop-ghosting",
+      "name": "Loop Ghosting",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [680, 500]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {},
+          "conditions": [
+            { "id": "lebih24", "leftValue": "={{ $json.jam_sejak_buat }}", "rightValue": 24, "operator": { "type": "number", "operation": "gte" } },
+            { "id": "belum1", "leftValue": "={{ $json.ghosting_status }}", "rightValue": "none", "operator": { "type": "string", "operation": "equals" } }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-24",
+      "name": "Ghosting 24 Jam?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [900, 400]
+    },
+    {
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $json.nomor_wa }}@s.whatsapp.net",
+        "content": "={{ 'Halo kak ' + $json.nama_pelanggan + ', kemarin kakak mau booking servis motor, tapi belum selesai prosesnya. Apakah mau dilanjutkan? Balas YA kalau mau lanjut ya kak! 😊' }}",
+        "options": {}
+      },
+      "id": "gowa-followup",
+      "name": "GoWA: Kirim Follow UP",
+      "type": "@aldinokemal2104/n8n-nodes-gowa.gowa",
+      "typeVersion": 1,
+      "position": [1120, 350],
+      "credentials": { "gowaApi": { "id": "fitmotor-gowa", "name": "FitMotor GoWA" } }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE booking SET ghosting_status = 'sent_1' WHERE id = '{{ $json.id }}';",
+        "options": {}
+      },
+      "id": "update-sent1",
+      "name": "MySQL: Update Sent 1",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [1340, 350],
+      "credentials": { "mySql": { "id": "fitmotor-mysql", "name": "FitMotor MySQL" } }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {},
+          "conditions": [
+            { "id": "lebih48", "leftValue": "={{ $json.jam_sejak_buat }}", "rightValue": 48, "operator": { "type": "number", "operation": "gte" } },
+            { "id": "sudah1", "leftValue": "={{ $json.ghosting_status }}", "rightValue": "sent_1", "operator": { "type": "string", "operation": "equals" } }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-48",
+      "name": "Ghosting 48 Jam?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [900, 600]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE booking SET status = 'batal', ghosting_status = 'closed' WHERE id = '{{ $json.id }}';",
+        "options": {}
+      },
+      "id": "update-batal",
+      "name": "MySQL: Update Batal",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [1120, 600],
+      "credentials": { "mySql": { "id": "fitmotor-mysql", "name": "FitMotor MySQL" } }
+    }
+  ],
+  "connections": {
+    "Setiap Jam 06:00": { "main": [[{ "node": "MySQL: Get Pending Reminders", "type": "main", "index": 0 }]] },
+    "MySQL: Get Pending Reminders": { "main": [[{ "node": "Loop Reminders", "type": "main", "index": 0 }]] },
+    "Loop Reminders": {
+      "main": [
+        [{ "node": "GoWA: Kirim Reminder", "type": "main", "index": 0 }]
+      ]
+    },
+    "GoWA: Kirim Reminder": { "main": [[{ "node": "MySQL: Update Reminder", "type": "main", "index": 0 }]] },
+    "MySQL: Update Reminder": { "main": [[{ "node": "Loop Reminders", "type": "main", "index": 0 }]] },
+
+    "Tiap 6 Jam": { "main": [[{ "node": "MySQL: Get Ghosting", "type": "main", "index": 0 }]] },
+    "MySQL: Get Ghosting": { "main": [[{ "node": "Loop Ghosting", "type": "main", "index": 0 }]] },
+    "Loop Ghosting": {
+      "main": [
+        [{ "node": "Ghosting 24 Jam?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Ghosting 24 Jam?": {
+      "main": [
+        [{ "node": "GoWA: Kirim Follow UP", "type": "main", "index": 0 }],
+        [{ "node": "Ghosting 48 Jam?", "type": "main", "index": 0 }]
+      ]
+    },
+    "GoWA: Kirim Follow UP": { "main": [[{ "node": "MySQL: Update Sent 1", "type": "main", "index": 0 }]] },
+    "MySQL: Update Sent 1": { "main": [[{ "node": "Loop Ghosting", "type": "main", "index": 0 }]] },
+    "Ghosting 48 Jam?": {
+      "main": [
+        [{ "node": "MySQL: Update Batal", "type": "main", "index": 0 }],
+        [{ "node": "Loop Ghosting", "type": "main", "index": 0 }]
+      ]
+    },
+    "MySQL: Update Batal": { "main": [[{ "node": "Loop Ghosting", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true },
+  "tags": [{ "name": "fitmotor" }],
+  "versionId": "v1"
+}

@@ -1,0 +1,59 @@
+{
+  "komplain_keywords": [
+    "kecewa","marah","kesal","tidak puas","nggak puas","gak puas",
+    "jelek","buruk","lambat","lama banget","rusak","bohong","menipu",
+    "tipu","komplain","parah","zonk","lemot","brengsek","kampungan",
+    "tidak profesional","gak profesional","nggak profesional",
+    "mengecewakan","mengecewakan","menyebalkan","nyebelin",
+    "servis jelek","hasilnya jelek","tidak beres","nggak beres",
+    "uang saya","mana hasilnya","kembalikan uang","refund"
+  ],
+
+  "cxct_codes": {
+    "CXCT01": {
+      "nama": "Promo Ganti Oli",
+      "flow_id": "promo_oil_flow",
+      "deskripsi": "Diskon ganti oli untuk pelanggan broadcast"
+    },
+    "CXCT02": {
+      "nama": "Promo Servis Rutin",
+      "flow_id": "promo_service_flow",
+      "deskripsi": "Promo servis rutin hemat"
+    },
+    "CXCT03": {
+      "nama": "Member Loyalty",
+      "flow_id": "promo_loyalty_flow",
+      "deskripsi": "Program loyalitas pelanggan setia"
+    }
+  },
+
+  "fallback_triggers": [
+    "jenis_pesan_audio",
+    "jenis_pesan_stiker",
+    "jenis_pesan_dokumen",
+    "jenis_pesan_gambar_tanpa_caption",
+    "teks_tidak_dikenali"
+  ],
+
+  "skip_ai_intents": [
+    "CXCT01", "CXCT02", "CXCT03"
+  ],
+
+  "layanan_tersedia": [
+    "Servis Rutin",
+    "Ganti Oli",
+    "Full Service",
+    "Tune-up",
+    "CVT Service",
+    "Throttle Body Cleaning",
+    "Pengecekan Rem",
+    "Ganti Busi",
+    "Ganti Filter Udara",
+    "Lainnya"
+  ],
+
+  "motor_tidak_diterima_full_service": {
+    "tahun_maksimal": 2010,
+    "jenis": ["karburator", "2-tak"]
+  }
+}

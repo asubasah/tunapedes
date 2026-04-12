@@ -1,0 +1,32 @@
+[
+  {
+    "username": "fitmotor",
+    "password": "testing08",
+    "role": "master",
+    "cabang": "master"
+  },
+  {
+    "username": "adiwerna",
+    "password": "okejek1",
+    "role": "branch",
+    "cabang": "adiwerna"
+  },
+  {
+    "username": "pesalakan",
+    "password": "okejek2",
+    "role": "branch",
+    "cabang": "pesalakan"
+  },
+  {
+    "username": "pacul",
+    "password": "okejek3",
+    "role": "branch",
+    "cabang": "pacul"
+  },
+  {
+    "username": "cikditiro",
+    "password": "okejek4",
+    "role": "branch",
+    "cabang": "cikditiro"
+  }
+]

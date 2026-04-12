@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FitMotor Enterprise Admin</title>
+  </head>
+  <body>
+
+    <!-- LOGIN GATE -->
+    <div id="login-gate" class="login-wrapper">
+      <div class="login-card glass-panel">
+        <img src="/fitmotor.webp" alt="FitMotor Logo" class="brand-logo-large" />
+        <h2>Masuk ke Command Center</h2>
+        <p class="login-subtitle">Otentikasi khusus karyawan FitMotor</p>
+        
+        <form id="loginForm">
+          <div class="input-group">
+            <label>Username</label>
+            <input type="text" id="username" required placeholder="Masukkan username" />
+          </div>
+          <div class="input-group">
+            <label>Password</label>
+            <input type="password" id="password" required placeholder="Masukkan password" />
+          </div>
+          <p id="login-error" class="error-msg text-danger"></p>
+          <button type="submit" class="btn-primary w-full">MASUK</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- MAIN APP DASHBOARD -->
+    <div id="app-dashboard" class="app-container" style="display:none;">
+      
+      <!-- Top Header -->
+      <header class="glass-header">
+        <div class="header-content">
+          <img src="/fitmotor.webp" alt="FitMotor Logo" class="brand-logo" />
+          <div>
+            <h1 class="brand-title">FitMotor Command Center</h1>
+            <p id="role-badge" class="badge-role">Cabang: MASTER</p>
+          </div>
+        </div>
+        
+        <div class="header-controls">
+          <!-- Filter Rendered if Master -->
+          <select id="branch-filter" class="glass-select" style="display:none;">
+            <option value="all">🌐 Semua Cabang</option>
+            <option value="adiwerna">Adiwerna</option>
+            <option value="pesalakan">Pesalakan</option>
+            <option value="pacul">Pacul</option>
+            <option value="cikditiro">Cikditiro</option>
+          </select>
+
+          <button id="btn-refresh" class="btn-icon" title="Refresh Live Data">
+            🔄 Sync
+          </button>
+          
+          <button id="btn-logout" class="btn-danger" title="Keluar">
+            Logout
+          </button>
+        </div>
+      </header>
+
+      <!-- Main Dashboard Grid -->
+      <main class="dashboard-grid">
+        
+        <div class="left-panels">
+          <!-- GoWA Manager -->
+          <section class="card gowa-panel">
+            <h2 class="panel-title">WhatsApp Scanner (GoWA)</h2>
+            <div class="cabang-grid" id="cabangGrid">
+              <!-- Render via bare JS -->
+            </div>
+          </section>
+
+          <!-- Master Admin Panel (Password Manager) -->
+          <section id="master-panel" class="card master-panel" style="display:none;">
+            <h2 class="panel-title text-warn">Master Control: Sandi Cabang</h2>
+            <div id="userList" class="user-list">
+              <!-- Render via JS -->
+            </div>
+          </section>
+        </div>
+
+        <!-- Right Panel: Live Kanban -->
+        <section class="card kanban-panel">
+          <h2 class="panel-title">Live Servis Board</h2>
+          
+          <div class="kanban-board">
+            <!-- Column Pending -->
+            <div class="kanban-col">
+              <h3 class="col-header">PENDING (Antrean)</h3>
+              <div class="col-body" id="col-pending"></div>
+            </div>
+            
+            <!-- Column Proses -->
+            <div class="kanban-col">
+              <h3 class="col-header text-warn">SEDANG PROSES</h3>
+              <div class="col-body" id="col-proses"></div>
+            </div>
+
+            <!-- Column Selesai -->
+            <div class="kanban-col">
+              <h3 class="col-header text-success">SELESAI (Hari Ini)</h3>
+              <div class="col-body" id="col-selesai"></div>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

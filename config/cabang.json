@@ -1,0 +1,79 @@
+{
+  "cabang": [
+    {
+      "id": "adiwerna",
+      "nama": "Adiwerna",
+      "alamat": "Jl. Raya Adiwerna No. ___, Adiwerna, Tegal",
+      "nomor_wa_admin": "628XXXXXXXXXX",
+      "koordinat_lat": -6.9089,
+      "koordinat_lng": 109.1156,
+      "jam_buka": "08:00",
+      "jam_tutup": "17:00",
+      "hari_buka": ["Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"],
+      "hari_libur": ["Minggu"],
+      "kapasitas_harian": 30,
+      "aktif": true,
+      "_catatan_koordinat": "DUMMY — area Kec. Adiwerna, Tegal Selatan"
+    },
+    {
+      "id": "pesalakan",
+      "nama": "Pesalakan",
+      "alamat": "Jl. Raya Pesalakan, Tegal",
+      "nomor_wa_admin": "628XXXXXXXXXX",
+      "koordinat_lat": -6.8912,
+      "koordinat_lng": 109.1234,
+      "jam_buka": "08:00",
+      "jam_tutup": "17:00",
+      "hari_buka": ["Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"],
+      "hari_libur": ["Minggu"],
+      "kapasitas_harian": 25,
+      "aktif": true,
+      "_catatan_koordinat": "DUMMY — area Pesalakan, Tegal Timur"
+    },
+    {
+      "id": "pacul",
+      "nama": "Pacul",
+      "alamat": "Jl. Pacul, Tegal",
+      "nomor_wa_admin": "628XXXXXXXXXX",
+      "koordinat_lat": -6.8756,
+      "koordinat_lng": 109.1189,
+      "jam_buka": "08:00",
+      "jam_tutup": "17:00",
+      "hari_buka": ["Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"],
+      "hari_libur": ["Minggu"],
+      "kapasitas_harian": 20,
+      "aktif": true,
+      "_catatan_koordinat": "DUMMY — area Pacul, Tegal Barat"
+    },
+    {
+      "id": "cikditiro",
+      "nama": "Cikditiro",
+      "alamat": "Jl. Cikditiro, Tegal",
+      "nomor_wa_admin": "628XXXXXXXXXX",
+      "koordinat_lat": -6.8634,
+      "koordinat_lng": 109.1312,
+      "jam_buka": "08:00",
+      "jam_tutup": "17:00",
+      "hari_buka": ["Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"],
+      "hari_libur": ["Minggu"],
+      "kapasitas_harian": 20,
+      "aktif": true,
+      "_catatan_koordinat": "DUMMY — area Cikditiro, Tegal Utara"
+    },
+    {
+      "id": "trayeman",
+      "nama": "Trayeman",
+      "alamat": "Jl. Trayeman, Slawi, Tegal",
+      "nomor_wa_admin": "628XXXXXXXXXX",
+      "koordinat_lat": -6.9823,
+      "koordinat_lng": 109.1412,
+      "jam_buka": "08:00",
+      "jam_tutup": "17:00",
+      "hari_buka": ["Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"],
+      "hari_libur": ["Minggu"],
+      "kapasitas_harian": 25,
+      "aktif": true,
+      "_catatan_koordinat": "DUMMY — area Trayeman, Kec. Slawi"
+    }
+  ]
+}
