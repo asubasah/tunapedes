@@ -394,7 +394,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO pelanggan (nomor_wa, nama, nopol, motor, cabang_default)\nVALUES (\n  '{{ $('Webhook (From Main Router)').item.json.body.nomor_wa }}',\n  '{{ $('Webhook (From Main Router)').item.json.body.nama_pelanggan || 'Pelanggan' }}',\n  '{{ $('Gemini: Ekstrak Data Booking').item.json.nopol }}',\n  '{{ $('Gemini: Ekstrak Data Booking').item.json.motor }}',\n  '{{ $('Gemini: Ekstrak Data Booking').item.json.cabang_id }}'\n)\nON DUPLICATE KEY UPDATE \n  nopol          = VALUES(nopol), \n  motor          = VALUES(motor),\n  cabang_default = VALUES(cabang_default),\n  updated_at     = NOW();",
+        "query": "INSERT INTO pelanggan (id, nomor_wa, nama, nopol, motor, cabang_default)\nVALUES (\n  CONCAT('CUS-', '{{ $('Webhook (From Main Router)').item.json.body.nomor_wa }}'),\n  '{{ $('Webhook (From Main Router)').item.json.body.nomor_wa }}',\n  '{{ $('Webhook (From Main Router)').item.json.body.nama_pelanggan || 'Pelanggan' }}',\n  '{{ $('Gemini: Ekstrak Data Booking').item.json.nopol }}',\n  '{{ $('Gemini: Ekstrak Data Booking').item.json.motor }}',\n  '{{ $('Gemini: Ekstrak Data Booking').item.json.cabang_id }}'\n)\nON DUPLICATE KEY UPDATE \n  nopol          = VALUES(nopol), \n  motor          = VALUES(motor),\n  cabang_default = VALUES(cabang_default),\n  updated_at     = NOW();",
         "options": {}
       },
       "id": "mysql-simpan-pelanggan-02",
