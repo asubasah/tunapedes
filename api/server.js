@@ -41,29 +41,21 @@ app.post("/api/gowa/start/:cabang", async (req, res) => {
       // Abaikan jika device sudah ada
     }
 
-    // 2. Dapatkan QR Code URL
+    // Dapatkan QR Code URL
     const response = await axios.get(`${GOWA_URL}/app/login`, {
       headers: { "X-Device-Id": deviceId }
     });
-    // Kembalikan objek yang sama sesuai format frontend lama: { data: { qr: "url_link" } }
-    // Proxy URL agar frontend bisa melingkupi firewall localhost VPS
-    const proxyUrl = `/api/gowa/proxy-qr?url=` + encodeURIComponent(response.data.results.qr_link);
-    res.json({ data: { qr: proxyUrl } });
+    
+    // Download image and convert to Base64
+    const qrImageLink = response.data.results.qr_link;
+    const imgBuffer = await axios.get(qrImageLink, { responseType: 'arraybuffer' });
+    const base64 = Buffer.from(imgBuffer.data).toString('base64');
+    const contentType = imgBuffer.headers['content-type'] || 'image/png';
+    const dataUri = `data:${contentType};base64,${base64}`;
+
+    res.json({ data: { qr: dataUri } });
   } catch (error) {
     res.status(500).json({ error: error.message });
-  }
-});
-
-// Proxy untuk QR Code Image
-app.get("/api/gowa/proxy-qr", async (req, res) => {
-  const { url } = req.query;
-  if (!url) return res.status(400).send("No URL provided");
-  try {
-    const response = await axios.get(url, { responseType: "stream" });
-    res.set("Content-Type", response.headers["content-type"] || "image/png");
-    response.data.pipe(res);
-  } catch (error) {
-    res.status(500).send("Failed to proxy QR");
   }
 });
 
