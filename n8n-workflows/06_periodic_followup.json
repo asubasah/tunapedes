@@ -1,0 +1,282 @@
+{
+  "name": "FitMotor — 06 Periodic Maintenance Follow-up",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "30 9 * * *" }] }
+      },
+      "id": "cron-periodic",
+      "name": "Setiap Jam 09:30",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM v_periodic_reminder_pending LIMIT 100;",
+        "options": {}
+      },
+      "id": "mysql-get-periodic",
+      "name": "MySQL: Get Pending Follow-ups",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [420, 300],
+      "alwaysOutputData": true,
+      "credentials": {
+        "mySql": { "id": "On2uunDgsIP8TtL0", "name": "FitMotor MySQL" }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "loop-periodic",
+      "name": "Loop Reminder Berkala",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "rules": [
+            {
+              "conditions": {
+                "options": { "leftValue": "", "caseSensitive": true, "typeValidation": "strict", "version": 2 },
+                "conditions": [
+                  {
+                    "id": "h1",
+                    "leftValue": "={{ $json.interval_hari }}",
+                    "rightValue": 1,
+                    "operator": { "type": "number", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "H+1"
+            },
+            {
+              "conditions": {
+                "options": { "leftValue": "", "caseSensitive": true, "typeValidation": "strict", "version": 2 },
+                "conditions": [
+                  {
+                    "id": "h30",
+                    "leftValue": "={{ $json.interval_hari }}",
+                    "rightValue": 30,
+                    "operator": { "type": "number", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "H+30"
+            },
+            {
+              "conditions": {
+                "options": { "leftValue": "", "caseSensitive": true, "typeValidation": "strict", "version": 2 },
+                "conditions": [
+                  {
+                    "id": "h90",
+                    "leftValue": "={{ $json.interval_hari }}",
+                    "rightValue": 90,
+                    "operator": { "type": "number", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "H+90"
+            },
+            {
+              "conditions": {
+                "options": { "leftValue": "", "caseSensitive": true, "typeValidation": "strict", "version": 2 },
+                "conditions": [
+                  {
+                    "id": "h180",
+                    "leftValue": "={{ $json.interval_hari }}",
+                    "rightValue": 180,
+                    "operator": { "type": "number", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "H+180"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "switch-interval",
+      "name": "Cek Interval Reminder",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [860, 300]
+    },
+
+    {
+      "parameters": {
+        "deviceIdOverride": "={{ $json.device_id }}",
+        "phoneNumber": "={{ $json.nomor_wa }}",
+        "message": "={{ 'Halo Kak ' + $json.nama_pelanggan + '! 😊\\n\\nSemoga motor *' + $json.nopol + '* yang sudah servis kemarin di FitMotor cabang *' + $json.nama_cabang + '* makin nyaman dikendarai ya!\\n\\nJika ada keluhan atau pertanyaan seputar servis kemarin, jangan ragu hubungi kami. Kami siap bantu! 🙏' }}"
+      },
+      "id": "gowa-h1",
+      "name": "GoWA: Follow-up H+1",
+      "type": "@aldinokemal2104/n8n-nodes-gowa.gowa",
+      "typeVersion": 1,
+      "position": [1100, 100],
+      "credentials": {
+        "goWhatsappApi": { "id": "iwMVuTKnzKkCBH6T", "name": "FitMotor GoWA" }
+      }
+    },
+    {
+      "parameters": {
+        "deviceIdOverride": "={{ $json.device_id }}",
+        "phoneNumber": "={{ $json.nomor_wa }}",
+        "message": "={{ 'Halo Kak ' + $json.nama_pelanggan + '! 🔧\\n\\nTidak terasa sudah *1 bulan* sejak servis *' + $json.jenis_servis + '* di FitMotor cabang *' + $json.nama_cabang + '* lho!\\n\\nJangan lupa rutin cek kondisi oli dan tekanan ban motor *' + $json.nopol + '* ya kak. Performa motor terjaga, perjalanan makin aman! 🏍️\\n\\nButuh servis? Ketik *BOOKING* dan kami siap bantu jadwalkan.' }}"
+      },
+      "id": "gowa-h30",
+      "name": "GoWA: Follow-up H+30",
+      "type": "@aldinokemal2104/n8n-nodes-gowa.gowa",
+      "typeVersion": 1,
+      "position": [1100, 260],
+      "credentials": {
+        "goWhatsappApi": { "id": "iwMVuTKnzKkCBH6T", "name": "FitMotor GoWA" }
+      }
+    },
+    {
+      "parameters": {
+        "deviceIdOverride": "={{ $json.device_id }}",
+        "phoneNumber": "={{ $json.nomor_wa }}",
+        "message": "={{ 'Halo Kak ' + $json.nama_pelanggan + '! 🏍️\\n\\nSudah *3 bulan* nih kak sejak servis terakhir di FitMotor *' + $json.nama_cabang + '*! Ini waktu yang tepat untuk *tune-up* motor *' + $json.nopol + '* supaya performa tetap maksimal dan mesin lebih awet.\\n\\nYuk booking sekarang sebelum antrean penuh! Ketik *BOOKING* atau hubungi kami langsung. 💪' }}"
+      },
+      "id": "gowa-h90",
+      "name": "GoWA: Follow-up H+90",
+      "type": "@aldinokemal2104/n8n-nodes-gowa.gowa",
+      "typeVersion": 1,
+      "position": [1100, 420],
+      "credentials": {
+        "goWhatsappApi": { "id": "iwMVuTKnzKkCBH6T", "name": "FitMotor GoWA" }
+      }
+    },
+    {
+      "parameters": {
+        "deviceIdOverride": "={{ $json.device_id }}",
+        "phoneNumber": "={{ $json.nomor_wa }}",
+        "message": "={{ 'Halo Kak ' + $json.nama_pelanggan + '! ⚠️\\n\\nWah, sudah *6 BULAN* sejak servis terakhir motor *' + $json.nopol + '* nih kak! Oli yang terlambat diganti bisa merusak mesin secara perlahan dan berbahaya di jalan.\\n\\nJangan tunda lagi ya kak! Segera booking servis di FitMotor cabang *' + $json.nama_cabang + '* sekarang.\\n\\nKetik *BOOKING* dan kami langsung bantu jadwalkan. Harga bersaing, mekanik berpengalaman! 🔧🙏' }}"
+      },
+      "id": "gowa-h180",
+      "name": "GoWA: Follow-up H+180",
+      "type": "@aldinokemal2104/n8n-nodes-gowa.gowa",
+      "typeVersion": 1,
+      "position": [1100, 580],
+      "credentials": {
+        "goWhatsappApi": { "id": "iwMVuTKnzKkCBH6T", "name": "FitMotor GoWA" }
+      }
+    },
+
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE riwayat_servis SET reminder_h1_sent = 1 WHERE id = {{ $('Loop Reminder Berkala').item.json.riwayat_id }};",
+        "options": {}
+      },
+      "id": "mysql-update-h1",
+      "name": "MySQL: Tandai H+1 Terkirim",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [1340, 100],
+      "credentials": {
+        "mySql": { "id": "On2uunDgsIP8TtL0", "name": "FitMotor MySQL" }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE riwayat_servis SET reminder_h30_sent = 1 WHERE id = {{ $('Loop Reminder Berkala').item.json.riwayat_id }};",
+        "options": {}
+      },
+      "id": "mysql-update-h30",
+      "name": "MySQL: Tandai H+30 Terkirim",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [1340, 260],
+      "credentials": {
+        "mySql": { "id": "On2uunDgsIP8TtL0", "name": "FitMotor MySQL" }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE riwayat_servis SET reminder_h90_sent = 1 WHERE id = {{ $('Loop Reminder Berkala').item.json.riwayat_id }};",
+        "options": {}
+      },
+      "id": "mysql-update-h90",
+      "name": "MySQL: Tandai H+90 Terkirim",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [1340, 420],
+      "credentials": {
+        "mySql": { "id": "On2uunDgsIP8TtL0", "name": "FitMotor MySQL" }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE riwayat_servis SET reminder_h180_sent = 1 WHERE id = {{ $('Loop Reminder Berkala').item.json.riwayat_id }};",
+        "options": {}
+      },
+      "id": "mysql-update-h180",
+      "name": "MySQL: Tandai H+180 Terkirim",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [1340, 580],
+      "credentials": {
+        "mySql": { "id": "On2uunDgsIP8TtL0", "name": "FitMotor MySQL" }
+      }
+    }
+  ],
+
+  "connections": {
+    "Setiap Jam 09:30": {
+      "main": [[{ "node": "MySQL: Get Pending Follow-ups", "type": "main", "index": 0 }]]
+    },
+    "MySQL: Get Pending Follow-ups": {
+      "main": [[{ "node": "Loop Reminder Berkala", "type": "main", "index": 0 }]]
+    },
+    "Loop Reminder Berkala": {
+      "main": [
+        [{ "node": "Cek Interval Reminder", "type": "main", "index": 0 }]
+      ]
+    },
+    "Cek Interval Reminder": {
+      "main": [
+        [{ "node": "GoWA: Follow-up H+1",   "type": "main", "index": 0 }],
+        [{ "node": "GoWA: Follow-up H+30",  "type": "main", "index": 0 }],
+        [{ "node": "GoWA: Follow-up H+90",  "type": "main", "index": 0 }],
+        [{ "node": "GoWA: Follow-up H+180", "type": "main", "index": 0 }]
+      ]
+    },
+    "GoWA: Follow-up H+1":   { "main": [[{ "node": "MySQL: Tandai H+1 Terkirim",   "type": "main", "index": 0 }]] },
+    "GoWA: Follow-up H+30":  { "main": [[{ "node": "MySQL: Tandai H+30 Terkirim",  "type": "main", "index": 0 }]] },
+    "GoWA: Follow-up H+90":  { "main": [[{ "node": "MySQL: Tandai H+90 Terkirim",  "type": "main", "index": 0 }]] },
+    "GoWA: Follow-up H+180": { "main": [[{ "node": "MySQL: Tandai H+180 Terkirim", "type": "main", "index": 0 }]] },
+    "MySQL: Tandai H+1 Terkirim":   { "main": [[{ "node": "Loop Reminder Berkala", "type": "main", "index": 0 }]] },
+    "MySQL: Tandai H+30 Terkirim":  { "main": [[{ "node": "Loop Reminder Berkala", "type": "main", "index": 0 }]] },
+    "MySQL: Tandai H+90 Terkirim":  { "main": [[{ "node": "Loop Reminder Berkala", "type": "main", "index": 0 }]] },
+    "MySQL: Tandai H+180 Terkirim": { "main": [[{ "node": "Loop Reminder Berkala", "type": "main", "index": 0 }]] }
+  },
+
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "tags": [{ "name": "fitmotor" }],
+  "versionId": "v1"
+}

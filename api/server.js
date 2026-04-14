@@ -199,7 +199,7 @@ app.put("/api/bookings/:id/status", async (req, res) => {
     if (status === 'proses' || status === 'selesai') {
       try {
         const [rows] = await pool.query(
-          `SELECT b.nomor_wa, b.nopol, b.layanan, c.nama as cabang_nama, c.device_id 
+          `SELECT b.nomor_wa, b.nopol, b.layanan, b.cabang_id, c.nama as cabang_nama, c.device_id 
            FROM booking b JOIN cabang c ON b.cabang_id = c.id WHERE b.id = ?`,
           [bookingId]
         );
@@ -223,6 +223,23 @@ app.put("/api/bookings/:id/status", async (req, res) => {
           }).catch(err => {
             console.error("Gagal kirim notif WA:", err.response ? err.response.data : err.message);
           });
+
+          // =====================================================
+          // AUTO-INSERT ke riwayat_servis saat servis SELESAI
+          // (Trigger data source untuk fitur periodic follow-up H+1/30/90/180)
+          // INSERT IGNORE agar idempoten — aman jika Kanban di-drag ulang
+          // =====================================================
+          if (status === 'selesai') {
+            await pool.query(
+              `INSERT IGNORE INTO riwayat_servis 
+                 (nopol, nomor_wa, cabang_id, tanggal, jenis_servis, booking_id)
+               VALUES (?, ?, ?, CURDATE(), ?, ?)`,
+              [data.nopol, data.nomor_wa, data.cabang_id, data.layanan, bookingId]
+            ).catch(err => {
+              console.error("Gagal insert riwayat_servis:", err.message);
+            });
+            console.log(`[riwayat_servis] Record created for booking ${bookingId}`);
+          }
         }
       } catch (err) {
         console.error("Error trigger WA notif:", err);

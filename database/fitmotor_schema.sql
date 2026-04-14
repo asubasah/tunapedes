@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS booking (
   jarak_km        DECIMAL(5,1)  NULL,
   biaya_jemput    INT           NOT NULL DEFAULT 0,
   alamat_jemput   TEXT          NULL,
-  status          ENUM('pending','confirmed','selesai','batal') NOT NULL DEFAULT 'pending',
+  status          ENUM('pending','proses','selesai','batal','confirmed') NOT NULL DEFAULT 'pending',
   reminder_sent   TINYINT(1)    NOT NULL DEFAULT 0,
   ghosting_status ENUM('none','sent_1','closed') NOT NULL DEFAULT 'none',
   catatan         TEXT          NULL,
@@ -97,21 +97,28 @@ CREATE TABLE IF NOT EXISTS booking (
 
 -- ── TABEL RIWAYAT SERVIS ─────────────────────────────────────
 CREATE TABLE IF NOT EXISTS riwayat_servis (
-  id           INT           AUTO_INCREMENT PRIMARY KEY,
-  nopol        VARCHAR(15)   NOT NULL,
-  nomor_wa     VARCHAR(20)   NOT NULL,
-  cabang_id    VARCHAR(20)   NOT NULL,
-  tanggal      DATE          NOT NULL,
-  jenis_servis VARCHAR(100)  NOT NULL,
-  oli          VARCHAR(100)  NULL,
-  kilometer    INT           NULL,
-  teknisi      VARCHAR(100)  NULL,
-  booking_id   VARCHAR(30)   NULL,
-  catatan      TEXT          NULL,
-  created_at   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_nopol    (nopol),
-  INDEX idx_nomor_wa (nomor_wa),
-  INDEX idx_tanggal  (tanggal),
+  id                INT           AUTO_INCREMENT PRIMARY KEY,
+  nopol             VARCHAR(15)   NOT NULL,
+  nomor_wa          VARCHAR(20)   NOT NULL,
+  cabang_id         VARCHAR(20)   NOT NULL,
+  tanggal           DATE          NOT NULL,
+  jenis_servis      VARCHAR(100)  NOT NULL,
+  oli               VARCHAR(100)  NULL,
+  kilometer         INT           NULL,
+  teknisi           VARCHAR(100)  NULL,
+  booking_id        VARCHAR(30)   NULL,
+  catatan           TEXT          NULL,
+  -- Kolom tracking periodic reminder (H+1/30/90/180 post-servis)
+  reminder_h1_sent   TINYINT(1)   NOT NULL DEFAULT 0,
+  reminder_h30_sent  TINYINT(1)   NOT NULL DEFAULT 0,
+  reminder_h90_sent  TINYINT(1)   NOT NULL DEFAULT 0,
+  reminder_h180_sent TINYINT(1)   NOT NULL DEFAULT 0,
+  created_at        DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_nopol            (nopol),
+  INDEX idx_nomor_wa         (nomor_wa),
+  INDEX idx_tanggal          (tanggal),
+  INDEX idx_reminder_tanggal (tanggal, reminder_h1_sent, reminder_h30_sent, reminder_h90_sent, reminder_h180_sent),
+  UNIQUE INDEX uq_booking_id (booking_id),   -- Cegah duplikat insert saat Kanban di-drag ulang
   FOREIGN KEY (cabang_id)  REFERENCES cabang(id),
   FOREIGN KEY (booking_id) REFERENCES booking(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
@@ -198,6 +205,28 @@ FROM booking b
 JOIN cabang c ON b.cabang_id = c.id
 WHERE b.status = 'pending'
   AND b.ghosting_status IN ('none','sent_1');
+
+-- ── VIEW PERIODIC MAINTENANCE REMINDER ──────────────────────
+-- Digunakan oleh n8n workflow 06 untuk mengirim WA H+1/30/90/180
+CREATE OR REPLACE VIEW v_periodic_reminder_pending AS
+SELECT
+  rs.id          AS riwayat_id,
+  rs.nopol,
+  rs.nomor_wa,
+  rs.jenis_servis,
+  COALESCE(p.nama, rs.nopol)         AS nama_pelanggan,
+  COALESCE(p.motor, rs.jenis_servis) AS motor,
+  c.nama        AS nama_cabang,
+  c.device_id,
+  DATEDIFF(CURDATE(), rs.tanggal)    AS interval_hari
+FROM riwayat_servis rs
+LEFT JOIN pelanggan p ON rs.nomor_wa = p.nomor_wa
+JOIN      cabang    c ON rs.cabang_id = c.id
+WHERE
+  (DATEDIFF(CURDATE(), rs.tanggal) = 1   AND rs.reminder_h1_sent   = 0) OR
+  (DATEDIFF(CURDATE(), rs.tanggal) = 30  AND rs.reminder_h30_sent  = 0) OR
+  (DATEDIFF(CURDATE(), rs.tanggal) = 90  AND rs.reminder_h90_sent  = 0) OR
+  (DATEDIFF(CURDATE(), rs.tanggal) = 180 AND rs.reminder_h180_sent = 0);
 
 -- ── STORED PROCEDURE: Cek Kapasitas Cabang ───────────────────
 DELIMITER //

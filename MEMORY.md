@@ -24,6 +24,10 @@ Integrasi: **n8n v1.x (Docker)** + **OpenRouter Cloud AI** + **MySQL** + **GoWA 
    - **Problem:** Regex `{...}` yang greedy sering menangkap snippet di dalam tag thought, membuat JSON rusak.
    - **Solution:** Wajib hapus tag `<thought>[\s\S]*?<\/thought>` (Case-Insensitive) sebelum parsing JSON di n8n.
 
+## Competitive Edge & Future Features
+1. **Periodic Maintenance Follow-up (Planned):** Menutup celah fitur yang sangat dicari di market (Fastwork). Mengirim pesan otomatis pada H+1, H+30, H+90, dan H+180.
+2. **Automated History Logging:** Memastikan setiap booking yang tuntas langsung tercatat di `riwayat_servis` secara atomik di backend.
+
 ## Work Status (Full Live Test 2026-04-13)
 - [x] Migrasi Code ke Repo Github `asubasah/tunapedes`.
 - [x] Deployment API & Frontend via PM2 Sukses.
@@ -33,5 +37,6 @@ Integrasi: **n8n v1.x (Docker)** + **OpenRouter Cloud AI** + **MySQL** + **GoWA 
 - [x] API_BASE Fix (Dynamic IP detection untuk Dashboard).
 - [x] AI Brain Migration (Ollama -> OpenRouter) SUCCESS.
 - [x] Robust AI Parser Implementation (Anti-Thought Block).
+- [/] Implementation of Periodic Maintenance Follow-up (H+1 to H+180).
 
-Sistem sekarang dalam kondisi **"READY FOR CLIENT"**.
+Sistem sekarang dalam kondisi **"READY FOR CLIENT"** dengan rencana peningkatan nilai jual (Competitive Advantage).
