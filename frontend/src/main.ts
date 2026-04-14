@@ -1,6 +1,10 @@
 import './style.css';
 
-const API_BASE = `http://${window.location.hostname}:3002/api`;
+// Dynamic API base: Use relative path if behind proxy, otherwise fallback to port 3002 on same host
+const API_BASE = import.meta.env.VITE_API_URL || 
+  (window.location.port === '' || window.location.port === '80' || window.location.port === '443' 
+    ? '/api' 
+    : `${window.location.protocol}//${window.location.hostname}:3002/api`);
 
 // Deteksi cabang dari nomor port — tidak butuh env variable, tidak bisa salah
 const PORT_MAP: Record<string, string> = {
