@@ -45,11 +45,25 @@ app.post("/api/gowa/start/:cabang", async (req, res) => {
     const response = await axios.get(`${GOWA_URL}/app/login`, {
       headers: { "X-Device-Id": deviceId }
     });
-    
     // Kembalikan objek yang sama sesuai format frontend lama: { data: { qr: "url_link" } }
-    res.json({ data: { qr: response.data.results.qr_link } });
+    // Proxy URL agar frontend bisa melingkupi firewall localhost VPS
+    const proxyUrl = `/api/gowa/proxy-qr?url=` + encodeURIComponent(response.data.results.qr_link);
+    res.json({ data: { qr: proxyUrl } });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Proxy untuk QR Code Image
+app.get("/api/gowa/proxy-qr", async (req, res) => {
+  const { url } = req.query;
+  if (!url) return res.status(400).send("No URL provided");
+  try {
+    const response = await axios.get(url, { responseType: "stream" });
+    res.set("Content-Type", response.headers["content-type"] || "image/png");
+    response.data.pipe(res);
+  } catch (error) {
+    res.status(500).send("Failed to proxy QR");
   }
 });
 
