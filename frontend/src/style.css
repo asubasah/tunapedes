@@ -214,19 +214,29 @@ body {
   outline: none;
 }
 
-.btn-icon {
-  background: rgba(255,255,255,0.1);
-  border: 1px solid var(--glass-border);
-  color: white;
-  padding: 8px 16px;
-  border-radius: 8px;
+.btn-sync {
+  background: transparent;
+  border: 1.5px solid rgba(255,255,255,0.18);
+  color: rgba(255,255,255,0.6);
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
   cursor: pointer;
-  transition: all 0.2s;
+  font-size: 1.1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.25s, color 0.25s, box-shadow 0.25s, transform 0.25s;
+  flex-shrink: 0;
 }
-.btn-icon:hover { background: rgba(255,255,255,0.2); }
-
-.spin { animation: spin 1s linear infinite; }
-@keyframes spin { 100% { transform: rotate(360deg); } }
+.btn-sync:hover {
+  border-color: var(--primary-accent);
+  color: var(--primary-accent);
+  box-shadow: 0 0 14px rgba(249,115,22,0.25);
+  transform: rotate(40deg);
+}
+.spin { animation: spinOnce 0.6s ease-in-out; }
+@keyframes spinOnce { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
 /* Grid */
 .dashboard-grid {

@@ -161,13 +161,19 @@ app.post("/api/auth/update", (req, res) => {
 // 2. KANBAN BOOKING ENDPOINTS (MYSQL DATA)
 // ==========================================
 
-// Ambil semua booking hari ini / pending
+// Ambil semua booking (nopol di-uppercase otomatis)
 app.get("/api/bookings", async (req, res) => {
   try {
     const [rows] = await pool.query(
-      `SELECT b.*, p.nama, p.motor as pelanggan_motor 
-       FROM booking b 
-       LEFT JOIN pelanggan p ON b.nomor_wa = p.nomor_wa 
+      `SELECT 
+         b.id, UPPER(b.nopol) AS nopol, b.nama_pelanggan, b.nomor_wa,
+         b.cabang_id, b.waktu_booking, b.layanan, b.status, b.status_jemput,
+         b.jarak_km, b.biaya_jemput, b.alamat_jemput,
+         b.reminder_sent, b.ghosting_status, b.catatan,
+         b.created_at, b.updated_at,
+         p.nama, p.motor AS pelanggan_motor
+       FROM booking b
+       LEFT JOIN pelanggan p ON b.nomor_wa = p.nomor_wa
        ORDER BY b.created_at DESC LIMIT 100`
     );
     res.json(rows);

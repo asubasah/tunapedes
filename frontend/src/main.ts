@@ -13,7 +13,7 @@ const PORT_MAP: Record<string, string> = {
 };
 const CURRENT_CABANG = PORT_MAP[window.location.port] || 'master';
 
-let loggedInUser: any = null;
+let loggedInUser: any = JSON.parse(localStorage.getItem('fitmotor_user') || 'null');
 
 const CABANG_LIST = [
   { id: 'adiwerna', name: 'Cabang Adiwerna' },
@@ -49,6 +49,18 @@ if (CURRENT_CABANG !== 'master') {
   branchFilter.value = CURRENT_CABANG;
 }
 
+if (loggedInUser) {
+  if (CURRENT_CABANG !== 'master' && loggedInUser.cabang !== CURRENT_CABANG) {
+    localStorage.removeItem('fitmotor_user');
+    loggedInUser = null;
+  } else {
+    loginGate.style.display = 'none';
+    appDashboard.style.display = 'flex';
+    roleBadge.innerText = `Cabang: ${loggedInUser.cabang.toUpperCase()}`;
+    setTimeout(initializeAppBasedOnRole, 100);
+  }
+}
+
 loginForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const userBox = document.getElementById('username') as HTMLInputElement;
@@ -75,6 +87,7 @@ loginForm.addEventListener('submit', async (e) => {
     const json = await res.json();
     if (json.success) {
       loggedInUser = json.user;
+      localStorage.setItem('fitmotor_user', JSON.stringify(json.user));
       roleBadge.innerText = `Cabang: ${loggedInUser.cabang.toUpperCase()}`;
       
       // Buka Gerbang
@@ -102,6 +115,7 @@ function showLoginError(msg: string) {
 }
 
 document.getElementById('btn-logout')?.addEventListener('click', () => {
+  localStorage.removeItem('fitmotor_user');
   location.reload();
 });
 
@@ -335,7 +349,7 @@ function renderKanban(bookings: any[]) {
         <span class="bkg-cabang">${(b.cabang_id || '').toUpperCase()}</span>
       </div>
       <div class="bkg-body">
-        <h4>${b.nopol}</h4>
+        <h4>${(b.nopol || '').toUpperCase().replace(/([A-Z]+)\s*(\d+)\s*([A-Z]+)/g, '$1 $2 $3')}</h4>
         <p>${b.nama || b.nama_pelanggan || 'Pelanggan'} - ${b.pelanggan_motor || b.layanan || 'Motor'}</p>
         <p style="margin-top:4px; font-size:0.8rem; color:var(--primary-accent);">
           <i>${b.status_jemput === 'jemput' ? '🚨 Antar Jemput' : '🔧 ' + (b.layanan || 'Servis Reguler')}</i>
